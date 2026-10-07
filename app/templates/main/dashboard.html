@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="welcome-msg">
+    Selamat Datang, {{ current_user.lecturer.name if current_user.lecturer else 'Dosen' }}!
+    <div style="float: right; font-size: 14px; margin-top: 5px;">
+        <a href="#" style="color: white; text-decoration: underline;"
+            onclick="alert('File panduan pembimbing belum diunggah admin.')"><i class="fas fa-book"></i> Panduan
+            Pembimbing</a>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card blue">
+        <div class="stat-number">{{ stats.mahasiswa_dibimbing }}</div>
+        <div class="stat-label">Mahasiswa Dibimbing</div>
+    </div>
+    <div class="stat-card purple">
+        <div class="stat-number">{{ stats.seminar_proposal }}</div>
+        <div class="stat-label">Seminar Proposal</div>
+    </div>
+    <div class="stat-card pink">
+        <div class="stat-number">{{ stats.seminar_hasil }}</div>
+        <div class="stat-label">Seminar Hasil</div>
+    </div>
+    <div class="stat-card orange">
+        <div class="stat-number">{{ stats.sidang_tertutup }}</div>
+        <div class="stat-label">Sidang Tertutup</div>
+    </div>
+</div>
+
+<!-- JADWAL SIDANG -->
+<div class="table-section" style="margin-top: 25px;">
+    <h3 class="table-title" style="color: #4f46e5;"><i class="fas fa-calendar-alt"></i> Jadwal Sidang Mendatang</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Tanggal</th>
+                <th>Waktu</th>
+                <th>Mahasiswa</th>
+                <th>Jenis Sidang</th>
+                <th>Link Zoom</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sem in upcoming_seminars %}
+            <tr>
+                <td>{{ sem.date.strftime('%d %b %Y') }}</td>
+                <td>{{ sem.time.strftime('%H:%M') if sem.time else '09:00' }} WIB</td>
+                <td>{{ sem.student_profile.name }}</td>
+                <td><span class="seminar-badge">{{ sem.seminar_type }}</span></td>
+                <td>
+                    {% if sem.student_profile.zoom_link %}
+                    <a href="{{ sem.student_profile.zoom_link }}" target="_blank" class="btn btn-sm btn-info">Join
+                        Zoom</a>
+                    {% else %}
+                    <span style="color: #666;">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" style="text-align: center; color: #666;">Tidak ada jadwal sidang dalam waktu dekat.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="table-section">
+    <h3 class="table-title">Daftar Proses Pembimbingan</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 10%;">NIM</th>
+                <th style="width: 15%;">Nama Lengkap</th>
+                <th style="width: 20%;">Judul Penelitian</th>
+                <th style="width: 10%;">Promotor</th>
+                <th style="width: 10%;">Ko-Promotor 1</th>
+                <th style="width: 10%;">Ko-Promotor 2</th>
+                <th style="width: 10%;">No. Telp</th>
+                <th style="width: 10%;">UT Daerah</th>
+                <th style="width: 10%;">Status Bimbingan</th>
+                <th style="width: 5%;">Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in student_data %}
+            <tr>
+                <td>{{ row.student.nim }}</td>
+                <td>{{ row.student.name }}</td>
+                <td class="research-title">{{ row.student.research_title or '-' }}</td>
+                <td>{{ row.promotor_name }}</td>
+                <td>{{ row.copro1_name }}</td>
+                <td>{{ row.copro2_name }}</td>
+                <td><div style="color: #666; margin-top: 3px;">
+                    <i class="fas fa-phone"></i> {{ row.student.phone_number or '-' }}
+                </div></td>
+                <td>{{ row.student.ut_daerah or '-' }}</td>
+                <td>
+                    <span class="status-badge status-tahap{{ row.student.current_progress_step }}">
+                        {{ row.student.status_bimbingan }}
+                    </span>
+                    <!-- <div style="font-size: 11px; margin-top: 4px; color: #666;">
+                        (Tahap {{ row.student.current_progress_step }})
+                    </div> -->
+                </td>
+                <td>
+                    <div class="action-btns">
+                        <button class="action-btn link"
+                            onclick="openZoomModal('{{ row.student.id }}', '{{ row.student.name }}', '{{ row.student.nim }}', '{{ row.student.zoom_link or '' }}')"
+                            title="Set Link Zoom">
+                            <i class="fas fa-video"></i>
+                        </button>
+                        <a href="{{ url_for('main.pembimbingan_detail', student_id=row.student.id) }}"
+                            class="action-btn view" title="Lihat Detail">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="9" style="text-align: center; padding: 20px;">Belum ada mahasiswa bimbingan.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'modals/_zoom_modal.html' %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openZoomModal(studentId, studentName, studentNim, zoomLink) {
+        document.getElementById('zoomStudentId').value = studentId;
+        document.getElementById('zoomStudentName').textContent = studentName;
+        document.getElementById('zoomStudentNim').textContent = `NIM: ${studentNim}`;
+        document.getElementById('zoomLinkInput').value = zoomLink;
+        document.getElementById('zoomStudentAvatar').textContent = studentName.charAt(0);
+        document.getElementById('zoomModal').style.display = 'flex';
+    }
+
+    function closeZoomModal() {
+        document.getElementById('zoomModal').style.display = 'none';
+    }
+
+    async function saveZoomLink(event) {
+        event.preventDefault();
+        const studentId = document.getElementById('zoomStudentId').value;
+        const zoomLink = document.getElementById('zoomLinkInput').value;
+
+        try { new URL(zoomLink); } catch (_) { alert("Harap masukkan URL link Zoom yang valid."); return; }
+
+        const response = await fetch(`/api/student/${studentId}/zoom-link`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ zoomLink: zoomLink }),
+        });
+
+        const result = await response.json();
+        if (result.status === 'success') {
+            alert(result.message);
+            closeZoomModal();
+            location.reload();
+        } else {
+            alert('Error: ' + result.message);
+        }
+    }
+</script>
+{% endblock %}

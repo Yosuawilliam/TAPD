@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<aside class="sidebar">
+    <div class="logo">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo Universitas Terbuka"
+            style="background-color: white; border-radius: 50%; padding: 4px;">
+        <h2>UNIVERSITAS TERBUKA</h2>
+    </div>
+    <ul class="nav-menu">
+
+        {% if current_user.is_authenticated and current_user.role == 'mahasiswa' %}
+        <li class="nav-item">
+            <a href="{{ url_for('student.dashboard') }}" class="nav-link active">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+        </li>
+
+        {% elif current_user.is_authenticated and current_user.role == 'dosen' %}
+        <li class="nav-item">
+            <a href="{{ url_for('main.dashboard') }}"
+                class="nav-link {{ 'active' if request.endpoint == 'main.dashboard' else '' }}">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+        </li>
+
+        <li class="nav-item has-submenu">
+            <a href="#"
+                class="nav-link submenu-toggle {{ 'active' if request.endpoint in ['main.persetujuan_pembimbing', 'main.daftar_ajuan', 'main.masukan_hasil_seminar'] else '' }}">
+                <i class="fas fa-tasks"></i>
+                <span>Menu Utama Dosen</span>
+                <i class="fas fa-chevron-down submenu-arrow"></i>
+            </a>
+            <ul class="submenu">
+                <li><a href="{{ url_for('main.persetujuan_pembimbing') }}"
+                        class="nav-link {{ 'active' if request.endpoint == 'main.persetujuan_pembimbing' else '' }}"><i
+                            class="fas fa-user-check"></i> Persetujuan Tim Promotor</a></li>
+                <li><a href="{{ url_for('main.daftar_ajuan') }}"
+                        class="nav-link {{ 'active' if request.endpoint == 'main.daftar_ajuan' else '' }}"><i
+                            class="fas fa-list-ul"></i> Daftar Ajuan Bimbingan</a></li>
+                <li><a href="{{ url_for('main.masukan_hasil_seminar') }}"
+                        class="nav-link {{ 'active' if request.endpoint == 'main.masukan_hasil_seminar' else '' }}"><i
+                            class="fas fa-clipboard-check"></i> Masukan Hasil Seminar</a></li>
+            </ul>
+        </li>
+
+        <li class="nav-item has-submenu">
+            <a href="#"
+                class="nav-link submenu-toggle {{ 'active' if request.endpoint in ['main.laporan_honorarium', 'main.akumulasi_penilaian_tapd', 'main.laporan_progres'] else '' }}">
+                <i class="fas fa-chart-bar"></i>
+                <span>Laporan/Peragaan</span>
+                <i class="fas fa-chevron-down submenu-arrow"></i>
+            </a>
+            <ul class="submenu">
+                <li><a href="{{ url_for('main.laporan_honorarium') }}"
+                        class="nav-link {{ 'active' if request.endpoint == 'main.laporan_honorarium' else '' }}"><i
+                            class="fas fa-money-bill-wave"></i> Laporan Honorarium</a></li>
+                <li><a href="{{ url_for('main.akumulasi_penilaian_tapd') }}"
+                        class="nav-link {{ 'active' if request.endpoint == 'main.akumulasi_penilaian_tapd' else '' }}"><i
+                            class="fas fa-clipboard-list"></i> Akumulasi Penilaian</a></li>
+                <li><a href="{{ url_for('main.laporan_progres') }}"
+                        class="nav-link {{ 'active' if request.endpoint == 'main.laporan_progres' else '' }}"><i
+                            class="fas fa-chart-line"></i> Laporan Progres</a></li>
+            </ul>
+        </li>
+
+        {% elif current_user.is_authenticated and current_user.role == 'admin' %}
+        <!-- Tampilan Sidebar untuk Admin -->
+        <li class="nav-item">
+            <a href="{{ url_for('main.kelola_panduan') }}"
+                class="nav-link {{ 'active' if request.endpoint == 'main.kelola_panduan' else '' }}">
+                <i class="fas fa-upload"></i> Kelola Panduan
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ url_for('main.database_viewer') }}"
+                class="nav-link {{ 'active' if request.endpoint == 'main.database_viewer' else '' }}">
+                <i class="fas fa-database"></i> Database Viewer
+            </a>
+        </li>
+        {% endif %}
+
+    </ul>
+</aside>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<div class="header">
+    <div class="header-top">
+        <h1>{{ title }}</h1>
+        {% if current_user.is_authenticated %}
+        <div class="user-info">
+
+            {% set pfp = none %}
+            {% set user_name = 'User' %}
+
+            {% if current_user.role == 'dosen' and current_user.lecturer %}
+            {% set pfp = current_user.lecturer.profile_picture %}
+            {% set user_name = current_user.lecturer.name %}
+            {% elif current_user.role == 'mahasiswa' and current_user.student %}
+            {% set pfp = current_user.student.profile_picture %}
+            {% set user_name = current_user.student.name %}
+            {% elif current_user.role == 'admin' and current_user.admin %}
+            {% set pfp = none %}
+            {% set user_name = current_user.admin.name %}
+            {% endif %}
+
+            <span>{{ user_name }}</span>
+
+            <div class="user-avatar-container" onclick="openProfileModal()" style="cursor: pointer;"
+                title="Ubah Foto Profil">
+                {% if pfp %}
+                <img src="{{ url_for('main.serve_upload', filename=pfp) }}" alt="Foto Profil" class="user-avatar-image">
+                {% else %}
+                <div class="user-avatar">{{ user_name[0] }}</div>
+                {% endif %}
+            </div>
+
+            <a href="{{ url_for('auth.logout') }}" title="Logout"><i class="fas fa-sign-out-alt"></i></a>
+        </div>
+        {% endif %}
+    </div>
+</div>

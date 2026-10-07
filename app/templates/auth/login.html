@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - Universitas Terbuka</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="login-page-body">
+    <main class="main-content">
+        <div class="login-container">
+            <div class="login-left">
+                <div class="welcome-content">
+                    <h1 class="welcome-title">Selamat Datang di<br>Sistem Digital TAPD</h1>
+                    <h1 class="welcome-title">(DigiTAPD)<br></h1>
+                    <p class="welcome-subtitle">Universitas Terbuka</p>
+                </div>
+            </div>
+            <div class="login-right">
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
+
+                <div class="form-switcher">
+                    <button id="btn-login" class="switch-btn" onclick="showForm('login')">Login</button>
+                    <button id="btn-register_dosen" class="switch-btn" onclick="showForm('register_dosen')">Daftar
+                        Dosen</button>
+                    <button id="btn-register_mahasiswa" class="switch-btn"
+                        onclick="showForm('register_mahasiswa')">Daftar Mahasiswa</button>
+                </div>
+
+                <div id="form-login" class="form-container">
+                    <div class="login-header">
+                        <h2 class="login-title">Masuk ke Akun Anda</h2>
+                        <p class="login-subtitle">Gunakan kredensial SSO Anda.</p>
+                    </div>
+                    <form class="login-form" method="POST" action="{{ url_for('auth.login') }}" novalidate>
+                        {{ login_form.hidden_tag() }}
+                        <div class="form-group">{{ login_form.sso_email.label(class="form-label") }} {{
+                            login_form.sso_email(class="form-input") }}</div>
+                        <div class="form-group">{{ login_form.password.label(class="form-label") }} {{
+                            login_form.password(class="form-input") }}</div>
+                        {{ login_form.submit(class="login-button") }}
+                    </form>
+                </div>
+
+                <!-- DAFTAR DOSEN -->
+                <div id="form-register_dosen" class="form-container">
+                    <div class="login-header">
+                        <h2 class="login-title">Daftar Akun Dosen</h2>
+                        <p class="login-subtitle">Buat akun sebagai pembimbing.</p>
+                    </div>
+                    <form class="login-form" method="POST" action="{{ url_for('auth.register_dosen') }}" novalidate>
+                        {{ reg_form.hidden_tag() }}
+                        <div class="form-group">{{ reg_form.sso_email.label(class="form-label") }} {{
+                            reg_form.sso_email(class="form-input") }}</div>
+                        <div class="form-group">{{ reg_form.name.label(class="form-label") }} {{
+                            reg_form.name(class="form-input") }}</div>
+                        <div class="form-group">{{ reg_form.id_number.label(text="NIP", class="form-label") }} {{
+                            reg_form.id_number(class="form-input") }}</div>
+
+                        <!-- Input No Telepon Dosen -->
+                        <div class="form-group">{{ reg_form.phone_number.label(class="form-label") }} {{
+                            reg_form.phone_number(class="form-input") }}</div>
+
+                        <div class="form-group">{{ reg_form.password.label(class="form-label") }} {{
+                            reg_form.password(class="form-input") }}</div>
+                        <div class="form-group">{{ reg_form.password2.label(class="form-label") }} {{
+                            reg_form.password2(class="form-input") }}</div>
+                        {{ reg_form.submit(value="Daftar Akun Dosen", class="login-button") }}
+                    </form>
+                </div>
+
+                <!-- DAFTAR MAHASISWA -->
+                <div id="form-register_mahasiswa" class="form-container">
+                    <div class="login-header">
+                        <h2 class="login-title">Daftar Akun Mahasiswa</h2>
+                        <p class="login-subtitle">Buat akun sebagai mahasiswa.</p>
+                    </div>
+                    <form class="login-form" method="POST" action="{{ url_for('auth.register_mahasiswa') }}" novalidate>
+                        {{ reg_form.hidden_tag() }}
+                        <div class="form-group">{{ reg_form.sso_email.label(class="form-label") }} {{
+                            reg_form.sso_email(class="form-input") }}</div>
+                        <div class="form-group">{{ reg_form.name.label(class="form-label") }} {{
+                            reg_form.name(class="form-input") }}</div>
+                        <div class="form-group">{{ reg_form.id_number.label(text="NIM", class="form-label") }} {{
+                            reg_form.id_number(class="form-input") }}</div>
+
+                        <!-- Input No Telepon Mahasiswa -->
+                        <div class="form-group">{{ reg_form.phone_number.label(class="form-label") }} {{
+                            reg_form.phone_number(class="form-input") }}</div>
+
+                        <!-- Dropdown UT Daerah -->
+                        <div class="form-group">
+                            {{ reg_form.ut_daerah.label(class="form-label") }}
+                            {{ reg_form.ut_daerah(class="form-input") }}
+                        </div>
+
+                        <div class="form-group">{{ reg_form.password.label(class="form-label") }} {{
+                            reg_form.password(class="form-input") }}</div>
+                        <div class="form-group">{{ reg_form.password2.label(class="form-label") }} {{
+                            reg_form.password2(class="form-input") }}</div>
+                        {{ reg_form.submit(value="Daftar Akun Mahasiswa", class="login-button") }}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function showForm(formType) {
+            document.querySelectorAll('.form-container').forEach(form => form.style.display = 'none');
+            document.querySelectorAll('.switch-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`form-${formType}`).style.display = 'block';
+            document.getElementById(`btn-${formType}`).classList.add('active');
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            const currentFormType = "{{ form_type or 'login' }}";
+            showForm(currentFormType);
+        });
+    </script>
+</body>
+
+</html>

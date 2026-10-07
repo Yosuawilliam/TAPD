@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+{% extends "layouts/base.html" %}
+
+{% block title %}Dashboard Mahasiswa{% endblock %}
+
+{% if rejected_applications %}
+<div class="rejection-notifications-container" style="margin-bottom: 20px;">
+    {% for app in rejected_applications %}
+    <div class="alert alert-danger" id="rejection-{{ app.id }}"
+        style="display: flex; justify-content: space-between; align-items: center;">
+        <span><i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>Pengajuan Anda sebagai <strong>{{
+                app.role_applied_for }}</strong> kepada <strong>{{ app.lecturer.name }}</strong> telah ditolak. Tim
+            dibatalkan.</span>
+        <button onclick="dismissNotification({{ app.id }})" class="btn btn-sm btn-light"
+            style="border: 1px solid #dc3545;">Ok</button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% block content %}
+<div class="pro-dashboard">
+    <section class="pro-header">
+        <div class="pro-header-main">
+            <div class="pro-avatar"><i class="fas fa-user-graduate"></i></div>
+            <div class="pro-details">
+                <h2 class="pro-name">{{ student.name }}</h2>
+                <p class="pro-meta">NIM: {{ student.nim }} | Periode: {{ student.masa or 'N/A' }} | UT Daerah: {{
+                    student.ut_daerah or '-' }}</p>
+                <p class="pro-meta"><i class="fas fa-phone"></i> {{ student.phone_number or 'Tidak ada no telepon' }}
+                </p>
+                <p class="pro-title"><strong>Judul:</strong> {{ student.research_title or 'Belum ada judul penelitian.'
+                    }}</p>
+            </div>
+        </div>
+        <div class="pro-actions">
+            <!-- Tombol Panduan -->
+            <a href="#" class="btn btn-secondary" onclick="alert('File panduan belum diunggah admin.')"><i
+                    class="fas fa-book"></i> Panduan Proposal & TAPD</a>
+            <button class="btn btn-primary" onclick="openModal('bimbinganModal')">
+                <i class="fas fa-plus"></i> Ajukan Bimbingan
+            </button>
+        </div>
+    </section>
+
+    <!-- PESAN KELULUSAN -->
+    {% if student.current_progress_step >= 14 %}
+    <section class="graduation-banner"
+        style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; border-radius: 12px; margin-bottom: 25px; text-align: center; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2);">
+        <i class="fas fa-medal" style="font-size: 48px; margin-bottom: 15px;"></i>
+        <h1 style="font-size: 28px; font-weight: 700;">Selamat!</h1>
+        <p style="font-size: 18px; max-width: 800px; margin: 10px auto;">Anda telah sukses menempuh studi pada Program
+            Doktoral di Universitas Terbuka.</p>
+    </section>
+    {% endif %}
+
+    <section class="pro-card">
+        <div class="pro-progress-status-grid">
+            <div class="progress-container">
+                <div class="progress-labels">
+                    <span class="label-title">Progress Bimbingan</span>
+                    <span class="label-percentage">{{ (student.current_progress_step / 14 * 100) | round | int
+                        }}%</span>
+                </div>
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill"
+                        style="width: {{ (student.current_progress_step / 14 * 100) | round | int }}%;"></div>
+                </div>
+            </div>
+            <div class="status-container">
+                <span class="label-title">Status Saat Ini</span>
+                <p class="current-status">{{ student.status_bimbingan }}</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="student-dashboard-grid">
+        <div class="dashboard-main-column">
+            <div class="pro-card" style="margin-bottom: 20px;">
+                <h3 class="pro-section-title" style="color: #4f46e5;"><i class="fas fa-link"></i> Tautan Penting</h3>
+                <table class="data-table" style="font-size: 13px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 5%;">NO</th>
+                            <th>NAMA DOKUMEN</th>
+                            <th style="width: 15%; text-align: center;">TAUTAN</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if tautan_tersedia %}
+                        {% for tautan in tautan_tersedia %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td style="font-weight: 500;">{{ tautan.nama }}</td>
+                            <td style="text-align: center;">
+                                <a href="{{ url_for('static', filename='panduan/' ~ tautan.file) }}" target="_blank"
+                                    class="btn btn-sm btn-info" title="Unduh File">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="3" style="text-align: center; color: #666;">Admin belum mengunggah dokumen tautan penting.
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pro-card">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                    <h3 class="pro-section-title" style="margin: 0;"><i class="fas fa-tasks"></i> Tugas & Dokumen Tahap Ini</h3>
+                
+                    <!-- TOMBOL UNDUH TEMPLATE DINAMIS UNTUK MAHASISWA -->
+                    <a href="{{ url_for('main.download_template_tahap', tahap=student.current_progress_step) }}"
+                        class="btn btn-sm btn-secondary" style="background: #f8fafc; border-color: #cbd5e1;">
+                        <i class="fas fa-file-word text-primary"></i> Unduh Template Persetujuan Tahap {{ student.current_progress_step
+                        }}
+                    </a>
+                </div>
+                <div class="pro-task-list">
+                    {% if tasks_with_status %}
+                    {% for task in tasks_with_status %}
+                    <div class="file-item-student">
+                        <div class="file-icon"><i class="fas {{ task.icon }}"></i></div>
+                        <div class="file-info-student">
+                            <div class="file-name">{{ task.type }}</div>
+                            {% if task.uploaded_doc %}
+                            <div class="file-status-student status-completed">
+                                <i class="fas fa-check-circle"></i> Diunggah: {{
+                                task.uploaded_doc.upload_date.strftime('%d %b %Y,
+                                %H:%M') }}
+                            </div>
+
+                            {% if task.approved_by %}
+                            <div class="approver-list">
+                                <i class="fas fa-check-double"></i>
+                                <strong>Disetujui oleh:</strong>
+                                {% for approver_name in task.approved_by %}
+                                <span class="approver-badge">{{ approver_name }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
+                            {% else %}
+                            <div class="file-status-student status-pending"><i class="fas fa-exclamation-circle"></i>
+                                Menunggu
+                                unggahan...</div>
+                            {% endif %}
+                        </div>
+                        <div class="file-actions-student">
+                            {% if task.uploaded_doc %}
+                            <a href="{{ url_for('student.download_document', filename=task.uploaded_doc.filename) }}"
+                                class="btn btn-download"><i class="fas fa-download"></i> Unduh</a>
+                            <button class="btn btn-upload-alt" onclick="openUploadModal('{{ task.type }}')"><i
+                                    class="fas fa-exchange-alt"></i> Ganti File</button>
+                            {% else %}
+                            <button class="btn btn-upload" onclick="openUploadModal('{{ task.type }}')"><i
+                                    class="fas fa-upload"></i> Unggah</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}<p style="text-align:center; color:#6b7280; padding: 20px 0;">Tidak ada tugas yang harus
+                        dikumpulkan
+                        pada tahap ini.</p>{% endif %}
+                </div>
+            </div>
+
+            <div class="chat-card" style="margin-top: 20px;">
+                <h3 class="pro-section-title"><i class="fas fa-comments"></i> Diskusi Bimbingan</h3>
+                <div class="chat-content">
+                    <div class="chat-messages" id="chat-messages"></div>
+                </div>
+                <div class="chat-input-area">
+                    <form id="chat-form" data-student-id="{{ student.id }}" data-user-id="{{ current_user.id }}">
+                        <div class="chat-input-container">
+                            <textarea class="chat-input-field" name="message" id="chat-input"
+                                placeholder="Ketik pesan Anda..." rows="1"></textarea>
+                            <label for="chat-attachment" class="btn btn-secondary"><i
+                                    class="fas fa-paperclip"></i></label>
+                            <input type="file" name="attachment" id="chat-attachment" style="display: none;">
+                            <button type="submit" class="chat-send-btn"><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                        <div id="attachment-preview" class="attachment-preview"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-side-column">
+            <div class="pro-card">
+                <h3 class="pro-section-title"><i class="fas fa-users"></i> Tim Pembimbing</h3>
+                <ul class="pro-supervisor-list">
+                    {% for sup in student.supervisions %}
+                    <li>
+                        <div class="supervisor-info">
+                            <div class="supervisor-avatar">{{ sup.lecturer.name[0] }}</div>
+                            <div>
+                                <span style="display:block;">{{ sup.lecturer.name }}</span>
+                                <small style="color:#666;">{{ sup.lecturer.phone_number or '' }}</small>
+                            </div>
+                        </div>
+                        <span class="role-tag-pro {{ sup.role|lower|replace(' ', '-') }}">{{ sup.role }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="pro-card">
+                <h3 class="pro-section-title"><i class="fas fa-history"></i> Riwayat Ajuan Bimbingan</h3>
+                <div class="pro-task-list" style="max-height: 250px; overflow-y: auto;">
+                    {% if bimbingan_requests %}
+                    {% for req in bimbingan_requests %}
+                    <div class="ajuan-item"
+                        style="display: flex; justify-content: space-between; align-items: center; padding: 12px 5px; border-bottom: 1px solid #f3f4f6;">
+                        <div class="ajuan-details">
+                            <p style="font-weight: 600; margin: 0; font-size: 14px;">{{ req.topic }}</p>
+                            <small style="color: #6b7280;">ke: {{ req.lecturer.name }} ({{ req.created_at.strftime('%d
+                                %b') }})</small>
+                        </div>
+                        <div class="ajuan-status">
+                            {% if req.status == 'Approved' %}<span class="status-badge"
+                                style="background-color: #dcfce7; color: #166534;">Disetujui</span>
+                            {% elif req.status == 'Rejected' %}<span class="status-badge"
+                                style="background-color: #fee2e2; color: #991b1b;">Ditolak</span>
+                            {% else %}<span class="status-badge"
+                                style="background-color: #fef9c3; color: #854d0e;">Pending</span>{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}<p style="text-align: center; color: #6b7280; padding: 20px 0;">Anda belum pernah
+                        mengajukan bimbingan.</p>{% endif %}
+                </div>
+            </div>
+
+            <div class="pro-card">
+                <h3 class="pro-section-title"><i class="fas fa-award"></i> Riwayat Penilaian</h3>
+                {% if completed_evaluations %}
+                {% for item in completed_evaluations %}
+                <div class="result-card" style="margin-bottom: 15px;">
+                    <div class="result-grade">{{ item.final_grade }}</div>
+                    <div class="result-details">
+                        <div class="result-seminar-type">{{ item.seminar.seminar_type }}</div>
+                        <div class="result-date">{{ item.seminar.date.strftime('%d %B %Y') }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}<p style="text-align: center; color: #6b7280; padding: 20px 0;">Belum ada hasil penilaian.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="uploadModal" style="display: none;">
+    <div class="modal-card">
+        <form id="uploadForm" method="post" enctype="multipart/form-data" onsubmit="handleUpload(event)">
+            <div class="modal-header">
+                <h2 class="modal-title" id="uploadModalTitle">Unggah Dokumen</h2>
+                <button type="button" class="modal-close" onclick="closeUploadModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="document_type" name="document_type">
+                <div class="form-group">
+                    <label for="file_upload" class="form-label">Pilih File</label>
+                    <input type="file" id="file_upload" name="file" class="form-input" required>
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        Catatan:
+                        <ul style="padding-left: 20px; margin-top: 5px;">
+                            <li>Draft TAPD/Proposal: PDF, Word (.doc, .docx)</li>
+                            <li>Analisis Data: PDF, Excel (.xls, .xlsx), CSV</li>
+                            <li>Lainnya: PDF</li>
+                        </ul>
+                    </small>
+                </div>
+                <div id="upload-status" style="margin-top: 15px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeUploadModal()">Batal</button>
+                <button type="submit" class="btn btn-primary">Unggah</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="bimbinganModal" style="display:none;">
+    <div class="modal-card">
+        <form id="bimbinganForm" method="POST" action="{{ url_for('student.ajukan_sesi_bimbingan') }}">
+            <div class="modal-header">
+                <h2 class="modal-title"><i class="fas fa-calendar-plus"></i> Ajukan Sesi Bimbingan</h2>
+                <button type="button" class="modal-close" onclick="closeModal('bimbinganModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="lecturer_id" class="form-label">Pilih Pembimbing</label>
+                    <select name="lecturer_id" id="lecturer_id" class="form-input" required>
+                        <option value="" disabled selected>-- Pilih Dosen Pembimbing --</option>
+                        {% for supervision in student.supervisions %}
+                        <option value="{{ supervision.lecturer.id }}">{{ supervision.lecturer.name }} ({{
+                            supervision.role }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="proposed_date" class="form-label">Tanggal yang Diusulkan</label>
+                    <input type="date" name="proposed_date" id="proposed_date" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="topic" class="form-label">Topik Diskusi</label>
+                    <textarea name="topic" id="topic" class="form-input" rows="4" placeholder="Contoh: Diskusi Bab 2..."
+                        required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('bimbinganModal')">Batal</button>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Kirim Ajuan</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openUploadModal(docType) {
+        document.getElementById('uploadModalTitle').innerText = 'Unggah: ' + docType;
+        document.getElementById('document_type').value = docType;
+        document.getElementById('uploadModal').style.display = 'flex';
+        document.getElementById('upload-status').innerHTML = '';
+        document.getElementById('file_upload').value = '';
+    }
+
+    function closeUploadModal() {
+        document.getElementById('uploadModal').style.display = 'none';
+    }
+
+    async function handleUpload(event) {
+        event.preventDefault();
+        const form = document.getElementById('uploadForm');
+        const formData = new FormData(form);
+        const statusDiv = document.getElementById('upload-status');
+        statusDiv.innerHTML = '<p>Mengunggah file, harap tunggu...</p>';
+
+        try {
+            const response = await fetch("{{ url_for('student.upload_document') }}", {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            if (result.status === 'success') {
+                statusDiv.innerHTML = `<p style="color: green;">${result.message}</p>`;
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                statusDiv.innerHTML = `<p style="color: red;">Error: ${result.message}</p>`;
+            }
+        } catch (error) {
+            statusDiv.innerHTML = `<p style="color: red;">Terjadi kesalahan saat mengunggah.</p>`;
+        }
+    }
+
+    function openModal(modalId) {
+        document.getElementById(modalId).style.display = 'flex';
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const chatForm = document.getElementById('chat-form');
+
+        if (chatForm) {
+            const chatBox = document.getElementById('chat-messages');
+            const chatAttachmentInput = document.getElementById('chat-attachment');
+            const attachmentPreview = document.getElementById('attachment-preview');
+            const STUDENT_ID = chatForm.dataset.studentId;
+            const CURRENT_USER_ID = parseInt(chatForm.dataset.userId);
+
+            function displayMessage(msg) {
+                const isSent = msg.sender_id === CURRENT_USER_ID;
+                let attachmentHTML = '';
+                if (msg.attachment_filename) {
+                    attachmentHTML = `<div class="chat-attachment" style="margin-top: 8px;"><a href="/student/download_chat/${msg.attachment_filename}" class="btn btn-sm btn-info"><i class="fas fa-download"></i> ${msg.attachment_filename.split('_').slice(3).join('_') || 'Unduh Lampiran'}</a></div>`;
+                }
+                chatBox.insertAdjacentHTML('beforeend', `<div class="chat-message ${isSent ? 'sent' : 'received'}"><div class="message"><div class="message-sender">${isSent ? 'Anda' : msg.sender_name}</div><p style="margin:0; white-space: pre-wrap;">${msg.message || ''}</p>${attachmentHTML}</div></div>`);
+            }
+
+            async function loadMessages() {
+                try {
+                    const response = await fetch(`/student/messages/${STUDENT_ID}`);
+                    const messages = await response.json();
+                    chatBox.innerHTML = '';
+                    messages.forEach(displayMessage);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                } catch (e) { console.error("Gagal memuat pesan:", e); }
+            }
+
+            function removeAttachment() {
+                chatAttachmentInput.value = '';
+                attachmentPreview.innerHTML = '';
+                attachmentPreview.style.display = 'none';
+            }
+
+            chatAttachmentInput.addEventListener('change', function () {
+                if (this.files.length > 0) {
+                    const filename = this.files[0].name;
+                    attachmentPreview.innerHTML = `<i class="fas fa-file"></i> <span>${filename}</span> <span class="remove-attachment" title="Hapus file">&times;</span>`;
+                    attachmentPreview.style.display = 'inline-flex';
+                    attachmentPreview.querySelector('.remove-attachment').addEventListener('click', removeAttachment);
+                } else {
+                    removeAttachment();
+                }
+            });
+
+            chatForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const formData = new FormData(chatForm);
+                if (!formData.get('message').trim() && (!formData.get('attachment') || !formData.get('attachment').size)) { return; }
+                await fetch(`/student/send_message/${STUDENT_ID}`, { method: 'POST', body: formData });
+                chatForm.reset();
+                removeAttachment();
+                await loadMessages();
+            });
+
+            loadMessages();
+            setInterval(loadMessages, 15000);
+        }
+    });
+
+    async function dismissNotification(applicationId) {
+        try {
+            const response = await fetch(`/student/dismiss_rejection/${applicationId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (response.ok) {
+                const notificationElement = document.getElementById(`rejection-${applicationId}`);
+                if (notificationElement) {
+                    notificationElement.style.transition = 'opacity 0.5s ease';
+                    notificationElement.style.opacity = '0';
+                    setTimeout(() => notificationElement.remove(), 500);
+                }
+            } else {
+                alert('Gagal menghapus notifikasi.');
+            }
+        } catch (error) {
+            console.error("Dismissal Error:", error);
+        }
+    }
+</script>
+{% endblock %}

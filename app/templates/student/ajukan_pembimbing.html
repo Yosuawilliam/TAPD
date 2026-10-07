@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+{% extends "layouts/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="table-section">
+    <h1 class="table-title">Bentuk Tim Pembimbing Anda</h1>
+    <p class="intro-text">Pilih dosen yang akan menjadi tim Anda dari daftar di bawah, lalu isi judul penelitian Anda. Dasbor bimbingan akan terbuka setelah semua posisi terisi.</p>
+
+    <div class="supervisor-grid">
+        {% set roles = [
+        {'name': 'Promotor', 'icon': 'fa-user-tie', 'class': 'slot-promotor'},
+        {'name': 'Ko-Promotor 1', 'icon': 'fa-user-friends', 'class': 'slot-copro1'},
+        {'name': 'Ko-Promotor 2', 'icon': 'fa-user-friends', 'class': 'slot-copro2'}
+        ] %}
+
+        {% set taken_lecturer_ids = [] %}
+        {% for lecturer in approved_supervisors.values() %}{% do taken_lecturer_ids.append(lecturer.id) %}{% endfor %}
+        {% for app in pending_applications.values() %}{% do taken_lecturer_ids.append(app.lecturer_id) %}{% endfor %}
+
+        {% for role in roles %}
+        <div class="supervisor-slot {{ role.class }}">
+            <div class="slot-header">
+                <div class="slot-icon"><i class="fas {{ role.icon }}"></i></div>
+                <h3 class="slot-title">{{ role.name }}</h3>
+            </div>
+            <div class="slot-body">
+                {% set approved = approved_supervisors.get(role.name) %}
+                {% set pending = pending_applications.get(role.name) %}
+
+                {% if approved %}
+                <div class="assigned-info">
+                    <span class="status-badge"><i class="fas fa-check-circle"></i> Terisi</span>
+                    <p class="lecturer-name">{{ approved.name }}</p>
+                </div>
+                {% elif pending %}
+                <div class="pending-info">
+                    <span class="status-badge"><i class="fas fa-clock"></i> Menunggu Persetujuan</span>
+                    <p class="lecturer-name">Diajukan kepada: {{ pending.lecturer.name }}</p>
+                </div>
+                {% else %}
+                <p>Posisi ini masih kosong. Silakan pilih dan ajukan dosen dari daftar di bawah ini.</p>
+                <form class="supervisor-form" method="POST" action="{{ url_for('student.ajukan_pembimbing') }}" style="margin-top: 15px;">
+                    <input type="hidden" name="role" value="{{ role.name }}">
+                    <input type="hidden" name="research_title">
+
+                    <div class="custom-dropdown">
+                        <input type="hidden" name="lecturer_id" required>
+                        <div class="dropdown-selected">
+                            <span>-- Pilih Dosen --</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="dropdown-options">
+                            <input type="text" class="dropdown-search" placeholder="Cari dosen...">
+                            <ul class="options-list">
+                                {% for lecturer in lecturers %}
+                                {% if lecturer.id not in taken_lecturer_ids %}
+                                <li data-value="{{ lecturer.id }}">{{ lecturer.name }}</li>
+                                {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" style="margin-top: 15px;">Ajukan sebagai {{ role.name }}</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="form-group" style="margin-top: 30px; border-top: 1px solid #eef2f7; padding-top: 25px;">
+        <label for="main_research_title" class="form-label" style="font-size: 1.1rem; font-weight: 600;">Judul Penelitian Utama (TAPD)</label>
+        
+        <textarea id="main_research_title" class="form-input" rows="3" placeholder="Masukkan judul penelitian Anda di sini..." required>{{ current_user.student.research_title or '' }}</textarea>
+        
+        <button id="saveTitleBtn" class="btn btn-success" style="margin-top: 10px;"><i class="fas fa-save"></i> Simpan Judul</button>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Script untuk dropdown dosen (tidak berubah)
+        document.querySelectorAll('.custom-dropdown').forEach(dropdown => {
+            const selected = dropdown.querySelector('.dropdown-selected');
+            const optionsContainer = dropdown.querySelector('.dropdown-options');
+            const searchInput = dropdown.querySelector('.dropdown-search');
+            const optionsList = dropdown.querySelector('.options-list');
+            const hiddenInput = dropdown.querySelector('input[name="lecturer_id"]');
+
+            selected.addEventListener('click', () => {
+                optionsContainer.style.display = optionsContainer.style.display === 'block' ? 'none' : 'block';
+                if (optionsContainer.style.display === 'block') {
+                    searchInput.focus();
+                }
+            });
+
+            searchInput.addEventListener('keyup', () => {
+                const filter = searchInput.value.toLowerCase();
+                optionsList.querySelectorAll('li').forEach(option => {
+                    const text = option.textContent.toLowerCase();
+                    option.style.display = text.includes(filter) ? '' : 'none';
+                });
+            });
+
+            optionsList.querySelectorAll('li').forEach(option => {
+                option.addEventListener('click', () => {
+                    selected.querySelector('span').textContent = option.textContent;
+                    hiddenInput.value = option.getAttribute('data-value');
+                    optionsContainer.style.display = 'none';
+                });
+            });
+        });
+
+        document.addEventListener('click', function (e) {
+            document.querySelectorAll('.custom-dropdown').forEach(dropdown => {
+                if (!dropdown.contains(e.target)) {
+                    dropdown.querySelector('.dropdown-options').style.display = 'none';
+                }
+            });
+        });
+
+        // Script untuk menyalin judul ke form (tidak berubah)
+        const forms = document.querySelectorAll('form.supervisor-form');
+        forms.forEach(form => {
+            form.addEventListener('submit', function(event) {
+                const mainTitle = document.getElementById('main_research_title').value;
+                if (!mainTitle.trim()) {
+                    alert('Judul Penelitian Utama harus diisi.');
+                    event.preventDefault(); 
+                    return;
+                }
+                const hiddenTitleInput = form.querySelector('input[name="research_title"]');
+                hiddenTitleInput.value = mainTitle;
+            });
+        });
+        
+        // ===============================================
+        // SCRIPT BARU UNTUK TOMBOL "SIMPAN JUDUL"
+        // ===============================================
+        const saveTitleBtn = document.getElementById('saveTitleBtn');
+        saveTitleBtn.addEventListener('click', async function() {
+            const title = document.getElementById('main_research_title').value;
+            if (!title.trim()) {
+                alert('Judul tidak boleh kosong untuk disimpan.');
+                return;
+            }
+
+            try {
+                const response = await fetch("{{ url_for('student.save_research_title') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ research_title: title })
+                });
+                const result = await response.json();
+                
+                alert(result.message); // Tampilkan pesan sukses atau error dari server
+                
+            } catch (error) {
+                console.error("Save Title Error:", error);
+                alert('Terjadi kesalahan saat menyimpan judul.');
+            }
+        });
+    });
+</script>
+{% endblock %}

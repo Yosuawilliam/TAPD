@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+{% extends "layouts/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="table-section">
+    <div class="table-header">
+        <h3 class="table-title">Unduh Rekapitulasi Nilai Mahasiswa</h3>
+    </div>
+    <p>Halaman ini berisi daftar semua mahasiswa yang Anda bimbing. Klik tombol "Unduh Nilai" untuk mengunduh
+        rekapitulasi semua hasil seminar dan sidang untuk mahasiswa yang bersangkutan dalam satu file Excel.</p>
+    <table class="data-table" style="margin-top: 20px;">
+        <thead>
+            <tr>
+                <th style="width: 5%;">No.</th>
+                <th>Nama</th>
+                <th>NIM</th>
+                <th>Prodi</th>
+                <th style="width: 30%;">Judul</th>
+                <th style="text-align: center;">Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student in students %}
+            <tr>
+                <td style="text-align: center;">{{ loop.index }}</td>
+                <td>{{ student.name }}</td>
+                <td>{{ student.nim }}</td>
+                <td>{{ student.program_studi or '-' }}</td>
+                <td class="research-title">{{ student.research_title or 'Belum ada judul' }}</td>
+                <td class="action-cell" style="text-align: center;">
+                    <button class="btn btn-success"
+                        onclick="downloadExcelForStudent({{ student.id }}, '{{ student.name }}', '{{ student.nim }}')">
+                        <i class="fas fa-download"></i> Unduh Nilai
+                    </button>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="text-align:center;">Anda tidak memiliki mahasiswa bimbingan.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function downloadExcelForStudent(studentId, studentName, studentNim) {
+
+        let seminarIds = [];
+        try {
+            const response = await fetch(`/api/student/${studentId}/seminars`);
+            if (!response.ok) {
+                throw new Error('Gagal mengambil data seminar mahasiswa.');
+            }
+            const seminars = await response.json();
+            seminarIds = seminars.map(s => s.id);
+
+            if (seminarIds.length === 0) {
+                alert('Mahasiswa ini belum memiliki riwayat seminar atau sidang untuk diunduh.');
+                return;
+            }
+        } catch (error) {
+            alert(error.message);
+            return;
+        }
+
+        const exportResponse = await fetch("{{ url_for('main.export_evaluations') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ seminar_ids: seminarIds })
+        });
+
+        if (exportResponse.ok) {
+            const blob = await exportResponse.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+
+            // Mengambil nama file dari header Content-Disposition yang dibuat backend
+            const disposition = exportResponse.headers.get('Content-Disposition');
+            let filename = `Laporan_Nilai_Lengkap_${studentName.replace(/ /g, "_")}_${studentNim}.xlsx`; // Fallback
+            if (disposition && disposition.indexOf('attachment') !== -1) {
+                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                const matches = filenameRegex.exec(disposition);
+                if (matches != null && matches[1]) {
+                    filename = matches[1].replace(/['"]/g, '');
+                }
+            }
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+        } else {
+            alert('Gagal mengunduh laporan Excel.');
+        }
+    }
+</script>
+{% endblock %}

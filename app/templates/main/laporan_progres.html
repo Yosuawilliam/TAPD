@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+{% extends "layouts/base.html" %}
+{% block title %}Laporan Progres Bimbingan{% endblock %}
+{% block content %}
+<div class="table-section">
+    <h3 class="table-title">Data Progres Bimbingan</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>NIM</th>
+                <th>Nama Mahasiswa</th>
+                <th>Progress Saat Ini</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student in students %}
+            <tr>
+                <td>{{ student.nim }}</td>
+                <td>{{ student.name }}</td>
+                <td>{{ student.status_bimbingan }} (Tahap {{ student.current_progress_step }})</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="3" style="text-align:center;">Tidak ada data progres untuk ditampilkan.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

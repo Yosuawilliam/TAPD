@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+{% extends "layouts/base.html" %}
+{% block title %}Masukan Hasil Seminar{% endblock %}
+
+{% block content %}
+<style>
+    .zoom-link-display {
+        max-width: 250px;
+        display: inline-block;
+        word-break: break-all;
+        text-decoration: none;
+        color: #007bff;
+    }
+
+    .zoom-link-display:hover {
+        text-decoration: underline;
+    }
+</style>
+
+<div class="table-container">
+    <div class="table-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 class="table-title">Riwayat Seminar untuk Dinilai</h3>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>TANGGAL</th>
+                <th>NIM</th>
+                <th>NAMA MAHASISWA</th>
+                <th>JENIS SEMINAR</th>
+                <th>LINK ZOOM / TEAMS</th>
+                <th>AKSI</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for seminar in seminars %}
+            <tr data-seminar-id="{{ seminar.id }}">
+                <td>{{ seminar.date.strftime('%d-%m-%Y') }}</td>
+                <td>{{ seminar.student_profile.nim }}</td>
+                <td>{{ seminar.student_profile.name }}</td>
+                <td>
+                    {% if seminar.seminar_type == 'Seminar Proposal' %}
+                    <span class="seminar-badge proposal">{{ seminar.seminar_type }}</span>
+                    {% elif seminar.seminar_type == 'Seminar Hasil' %}
+                    <span class="seminar-badge hasil">{{ seminar.seminar_type }}</span>
+                    {% elif seminar.seminar_type == 'Sidang Tertutup' %}
+                    <span class="seminar-badge tertutup">{{ seminar.seminar_type }}</span>
+                    {% elif seminar.seminar_type == 'Sidang Terbuka (Promosi)' %}
+                    <span class="seminar-badge terbuka">{{ seminar.seminar_type }}</span>
+                    {% else %}
+                    <span class="seminar-badge">{{ seminar.seminar_type }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if seminar.student_profile.zoom_link %}
+                    <a href="{{ seminar.student_profile.zoom_link }}" target="_blank" class="zoom-link-display">{{
+                        seminar.student_profile.zoom_link }}</a>
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+                <td class="action-cell">
+                    {% if seminar.id in evaluated_seminar_ids %}
+                    <button class="btn btn-secondary" disabled><i class="fas fa-check"></i> Dinilai</button>
+                    {% else %}
+                    <button class="btn btn-primary"
+                        onclick="openGradingModal('{{ seminar.id }}', '{{ seminar.student_profile.nim }}', '{{ seminar.student_profile.name }}', '{{ seminar.seminar_type }}', '{{ seminar.student_profile.research_title }}', '{{ seminar.student_profile.program_studi }}', '{{ seminar.student_profile.ut_daerah }}')"
+                        title="Input Nilai">
+                        <i class="fas fa-edit"></i> Nilai
+                    </button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="text-align:center;">Tidak ada riwayat seminar untuk dinilai.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div id="modal-placeholder"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const praProposalCriteria = {
+    "On Desk": [
+        { id: 'pp_desk_1', label: '1. Pendahuluan' },
+        { id: 'pp_desk_2', label: '2. Tinjauan Pustaka' },
+        { id: 'pp_desk_3', label: '3. Metode' },
+        { id: 'pp_desk_4', label: '4. Instrumen Penelitian' },
+        { id: 'pp_desk_5', label: '5. Daftar Pustaka' }
+    ],
+    "Performance": [
+        { id: 'pp_perf_1', label: '1. Kemampuan Mengemukakan Gagasan Inti Secara Lisan' },
+        { id: 'pp_perf_2', label: '2. Kemampuan Berargumen Secara Lisan' },
+        { id: 'pp_perf_3', label: '3. Sikap Ilmiah' },
+        { id: 'pp_perf_4', label: '4. Sikap Personal dan Sosial' }
+    ]
+};
+
+// --- KRITERIA BARU UNTUK SIDANG KOMISI PRA SEMINAR HASIL ---
+const praSeminarHasilCriteria = {
+    "On Desk": [
+        { id: 'psh_desk_1', label: '1. Pendahuluan' },
+        { id: 'psh_desk_2', label: '2. Tinjauan Pustaka' },
+        { id: 'psh_desk_3', label: '3. Validasi Instrumen Penelitian' },
+        { id: 'psh_desk_4', label: '4. Temuan hasil penelitian' },
+        { id: 'psh_desk_5', label: '5. Daftar Pustaka' }
+    ],
+    "Performance": [
+        { id: 'psh_perf_1', label: '1. Kemampuan Mengemukakan Gagasan Inti Secara Lisan' },
+        { id: 'psh_perf_2', label: '2. Kemampuan Berargumen Secara Lisan' },
+        { id: 'psh_perf_3', label: '3. Sikap Ilmiah' },
+        { id: 'psh_perf_4', label: '4. Sikap Personal dan Sosial' }
+    ]
+};
+
+// --- KRITERIA BARU UNTUK SIDANG KOMISI PRA UJIAN TERTUTUP ---
+const praUjianTertutupCriteria = {
+    "On Desk": [
+        { id: 'put_desk_1', label: '1. Pendahuluan' },
+        { id: 'put_desk_2', label: '2. Tinjauan Pustaka' },
+        { id: 'put_desk_3', label: '3. Metode' },
+        { id: 'put_desk_4', label: '4. Instrumen Penelitian' },
+        { id: 'put_desk_5', label: '5. Kesimpulan dan saran' },
+        { id: 'put_desk_6', label: '6. Daftar Pustaka' }
+    ],
+    "Performance": [
+        { id: 'put_perf_1', label: '1. Kemampuan Mengemukakan Gagasan Inti Secara Lisan' },
+        { id: 'put_perf_2', label: '2. Kemampuan Berargumen Secara Lisan' },
+        { id: 'put_perf_3', label: '3. Sikap Ilmiah' },
+        { id: 'put_perf_4', label: '4. Sikap Personal dan Sosial' }
+    ]
+};
+
+    const proposalCriteria = {
+        "BAB I Pendahuluan": [
+            { id: 'bab1_a', label: 'A. Latar Belakang' }, { id: 'bab1_b', label: 'B. Rumusan Masalah' },
+            { id: 'bab1_c', label: 'C. Maksud dan Tujuan Penelitian' }, { id: 'bab1_d', label: 'D. Kegunaan Penelitian' }
+        ],
+        "BAB II Tinjauan Pustaka": [
+            { id: 'bab2_a', label: 'A. Tinjauan Penelitian Terkait' }, { id: 'bab2_b', label: 'B. Konsep dan Teori yang Digunakan' },
+            { id: 'bab2_c', label: 'C. Kerangka Pemikiran' }, { id: 'bab2_d', label: 'D. Hipotesis (Jika Ada)' }
+        ],
+        "BAB III Metode Penelitian": [
+            { id: 'bab3_a', label: 'A. Pendekatan Yang Digunakan' }, { id: 'bab3_b', label: 'B. Populasi dan Sampel' },
+            { id: 'bab3_c', label: 'C. Unit Analisis' }, { id: 'bab3_d', label: 'D. Analisis Instrumen' },
+            { id: 'bab3_e', label: 'E. Definisi Operasional' }, { id: 'bab3_f', label: 'F. Instrumen/Pedoman Wawancara' }
+        ],
+        "Daftar Pustaka": [
+            { id: 'pustaka_sumber', label: 'Sumber', desc: 'Buku/Jurnal (minimal 5 buah)/Tesis/Artikel Internet (bukan blog/wikipedia)' },
+            { id: 'pustaka_format', label: 'Format Penulisan', desc: 'Sistematika Penulisan, Korelasi Antar Bagian' },
+            { id: 'pustaka_kutipan', label: 'Pengutipan Sumber', desc: 'Kesesuaian sumber kutipan dengan daftar pustaka' },
+            { id: 'pustaka_plagiarisme', label: 'Pengingatan dan Penjelasan Aspek Plagiarisme', desc: 'Dicek sebelum maju ujian sidang' }
+        ],
+        "Performance": [
+            { id: 'perf_gagasan', label: 'Kemampuan Mengemukakan Gagasan Inti Secara Lisan' },
+            { id: 'perf_argumen', label: 'Kemampuan Berargumentasi Secara Lisan' },
+            { id: 'perf_ilmiah', label: 'Sikap Ilmiah' },
+            { id: 'perf_personal', label: 'Sikap Personal dan Sosial' }
+        ]
+    };
+
+   
+    const hasilCriteria = {
+        "BAB I Pendahuluan": proposalCriteria["BAB I Pendahuluan"],
+        "BAB II Tinjauan Pustaka": proposalCriteria["BAB II Tinjauan Pustaka"],
+        "BAB III Metode Penelitian": proposalCriteria["BAB III Metode Penelitian"],
+        "BAB IV Hasil dan Pembahasan": [
+            { id: 'bab4_deskripsi', label: 'A. Deskripsi Data dan Hasil Penelitian' },
+            { id: 'bab4_temuan', label: 'B. Temuan Hasil Penelitian' },
+            { id: 'bab4_pembahasan', label: 'C. Pembahasan Hasil Penelitian' }
+        ],
+        "BAB V Kesimpulan dan Saran": [
+            { id: 'bab5_kesimpulan', label: 'A. Kesimpulan' },
+            { id: 'bab5_saran', label: 'B. Keterbatasan dan Saran Penelitian Lanjutan' }
+        ],
+        "Daftar Pustaka": proposalCriteria["Daftar Pustaka"],
+        "Performance": proposalCriteria["Performance"]
+    };
+
+    const sidangCriteria = {
+    "BAB I Pendahuluan": [{ id: 'sidang_bab1', label: 'Kualitas Latar Belakang, Rumusan Masalah, dan Tujuan' }],
+    "BAB II Tinjauan Pustaka": [{ id: 'sidang_bab2', label: 'Relevansi, Kedalaman, dan Kemutakhiran Teori' }],
+    "BAB III Metode Penelitian": [{ id: 'sidang_bab3', label: 'Ketepatan Metodologi, Desain, dan Teknik Analisis' }],
+    "BAB IV Hasil dan Pembahasan": [{ id: 'sidang_bab4', label: 'Penyajian, Analisis, dan Pembahasan Hasil' }],
+    "BAB V Kesimpulan dan Saran": [{ id: 'sidang_bab5', label: 'Konsistensi Kesimpulan, Implikasi, dan Saran' }],
+    "Performance Sidang": [
+        { id: 'sidang_perf_presentasi', label: 'Kualitas Presentasi (Kejelasan, Sistematika, Waktu)' },
+        { id: 'sidang_perf_penguasaan', label: 'Penguasaan Materi Keseluruhan' },
+        { id: 'sidang_perf_argumentasi', label: 'Kemampuan Berargumentasi dan Menjawab' }
+        ]
+    };
+
+    function createCriteriaRow(item) {
+        return `
+        <div class="criteria-item">
+            <div class="criteria-header">${item.label}</div>
+            ${item.desc ? `<div class="criteria-description">${item.desc}</div>` : ''}
+            <div class="criteria-controls">
+                <input type="number" class="score-input" placeholder="0-100" name="${item.id}_score">
+                <div class="radio-group">
+                    <div class="radio-option"><input type="radio" id="${item.id}_ya" name="${item.id}_adequate" value="ya"><label for="${item.id}_ya">Ya</label></div>
+                    <div class="radio-option"><input type="radio" id="${item.id}_tidak" name="${item.id}_adequate" value="tidak"><label for="${item.id}_tidak">Tidak</label></div>
+                </div>
+                <textarea class="feedback-input" placeholder="Tuliskan masukan..." name="${item.id}_feedback"></textarea>
+            </div>
+        </div>`;
+    }
+
+    function createSectionHTML(title, criteria) {
+        let criteriaHTML = criteria.map(createCriteriaRow).join('');
+        return `<div class="evaluation-section"><div class="section-header"><h3 class="section-title">${title}</h3></div>${criteriaHTML}</div>`;
+    }
+
+    function setupAutomaticGrading() {
+            const scoreInputs = document.querySelectorAll('.score-input');
+            const avgScoreEl = document.getElementById('avg_score');
+            const finalGradeEl = document.getElementById('final_grade');
+            const gpaScoreEl = document.getElementById('gpa_score');
+            const passingStatusEl = document.getElementById('passing_status');
+
+            function updateFinalGrade() {
+                let totalScore = 0;
+                let validScores = 0;
+
+                scoreInputs.forEach(input => {
+                    const value = parseFloat(input.value);
+                    if (!isNaN(value)) {
+                        totalScore += value;
+                        validScores++;
+                    }
+                });
+
+                if (validScores === 0) {
+                    avgScoreEl.value = '';
+                    finalGradeEl.value = '';
+                    gpaScoreEl.value = '';
+                    passingStatusEl.value = '';
+                    return;
+                }
+
+                const average = totalScore / validScores;
+                avgScoreEl.value = average.toFixed(2);
+
+                
+                if (average >= 85) {
+                    finalGradeEl.value = 'A';
+                    gpaScoreEl.value = '3,51 - 4,00';
+                    passingStatusEl.value = 'Lulus';
+                    passingStatusEl.style.color = '#166534'; 
+                    passingStatusEl.style.fontWeight = 'bold';
+                } else if (average >= 80) {
+                    finalGradeEl.value = 'A-';
+                    gpaScoreEl.value = '3,25 - 3,50';
+                    passingStatusEl.value = 'Lulus';
+                    passingStatusEl.style.color = '#166534'; 
+                    passingStatusEl.style.fontWeight = 'bold';
+                } else if (average >= 75) {
+                    finalGradeEl.value = 'B';
+                    gpaScoreEl.value = '3,00 - 3,24';
+                    passingStatusEl.value = 'Tidak Lulus';
+                    passingStatusEl.style.color = '#991b1b'; 
+                    passingStatusEl.style.fontWeight = 'bold';
+                } else {
+                    finalGradeEl.value = 'C';
+                    gpaScoreEl.value = '< 3,00';
+                    passingStatusEl.value = 'Tidak Lulus';
+                    passingStatusEl.style.color = '#991b1b'; 
+                    passingStatusEl.style.fontWeight = 'bold';
+                }
+            }
+
+            scoreInputs.forEach(input => {
+                input.addEventListener('input', updateFinalGrade);
+            });
+        }
+
+    
+    async function openGradingModal(seminarId, nim, studentName, seminarType, title, prodi, utDaerah) {
+            const modalPlaceholder = document.getElementById('modal-placeholder');
+            let evaluationHTML = '';
+            let modalTitle = `Penilaian ${seminarType}`;
+            let criteriaToUse;
+
+            const isSidangKomisi = [
+                'Sidang Komisi Pra-Seminar Proposal',
+                'Sidang Komisi Pra-Seminar Hasil',
+                'Sidang Komisi Pra-Ujian Tertutup'
+            ].includes(seminarType);
+            const isSidangAkhir = ['Sidang Tertutup', 'Sidang Terbuka'].includes(seminarType);
+
+            // Logika pemilihan kriteria (tidak berubah)
+            if (seminarType === 'Seminar Proposal') {
+                criteriaToUse = proposalCriteria;
+            } else if (seminarType === 'Seminar Hasil') {
+                criteriaToUse = hasilCriteria;
+            } else if (isSidangKomisi) {
+                if (seminarType === 'Sidang Komisi Pra-Seminar Proposal') criteriaToUse = praProposalCriteria;
+                if (seminarType === 'Sidang Komisi Pra-Seminar Hasil') criteriaToUse = praSeminarHasilCriteria;
+                if (seminarType === 'Sidang Komisi Pra-Ujian Tertutup') criteriaToUse = praUjianTertutupCriteria;
+            } else if (isSidangAkhir) {
+                criteriaToUse = sidangCriteria;
+            } else {
+                alert('Tipe seminar tidak dikenal, tidak dapat menampilkan form penilaian.');
+                return;
+            }
+
+            // Buat form kriteria (tidak berubah)
+            for (const section in criteriaToUse) {
+                evaluationHTML += createSectionHTML(section, criteriaToUse[section]);
+            }
+
+            // --- PERUBAHAN UTAMA DI SINI ---
+            // Siapkan dua versi formulir evaluasi akhir
+            let finalSectionHTML = '';
+
+            if (isSidangKomisi) {
+            // Versi Otomatis untuk Sidang Komisi
+            finalSectionHTML = `
+        <div class="final-section">
+            <h3>Hasil Akhir Evaluasi</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                <div class="form-group"><label class="form-label">Nilai Rata-rata</label><input type="text" id="avg_score" class="form-input" readonly></div>
+                <div class="form-group"><label for="final_grade" class="form-label">Indeks Akhir</label><input type="text" id="final_grade" name="final_grade" class="form-input" readonly></div>
+                <div class="form-group"><label class="form-label">Skor Indeks</label><input type="text" id="gpa_score" class="form-input" readonly></div>
+                <div class="form-group"><label class="form-label">Status Kelulusan</label><input type="text" id="passing_status" class="form-input" readonly></div>
+            </div>
+            <div class="form-group"><label for="general_notes" class="form-label">Catatan Umum / Kesimpulan</label><textarea id="general_notes" name="general_notes" class="form-input" rows="4"></textarea></div>
+        </div>`;
+        } else {
+            finalSectionHTML = `
+            <div class="final-section">
+                <h3>Catatan Evaluasi</h3>
+                <div class="form-group">
+                    <label for="general_notes" class="form-label">Catatan Umum / Kesimpulan</label>
+                    <textarea id="general_notes" name="general_notes" class="form-input" rows="4" placeholder="Tuliskan masukan, revisi, atau kesimpulan..."></textarea>
+                </div>
+            </div>`;
+        }
+
+    modalPlaceholder.innerHTML = `
+    <div class="modal-overlay show" id="gradingModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">${modalTitle} untuk ${studentName}</h2>
+                <button type="button" class="modal-close" onclick="closeGradingModal()">&times;</button>
+            </div>
+            <form id="gradingForm" onsubmit="submitGrade(event, '${seminarId}')">
+                <div class="modal-body">
+                    <div class="student-info">
+                         <h3>Informasi Mahasiswa</h3>
+                        <div class="info-grid">
+                            <div class="info-item"><span class="info-label">NIM</span><span class="info-value">${nim}</span></div>
+                            <div class="info-item"><span class="info-label">Nama</span><span class="info-value">${studentName}</span></div>
+                            <div class="info-item"><span class="info-label">Program Studi</span><span class="info-value">${prodi}</span></div>
+                            <div class="info-item"><span class="info-label">UT Daerah</span><span class="info-value">${utDaerah}</span></div>
+                            <div class="info-item" style="grid-column: 1 / -1;"><span class="info-label">Judul</span><span class="info-value">${title}</span></div>
+                        </div>
+                    </div>
+                    ${evaluationHTML}
+                    ${finalSectionHTML} </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeGradingModal()">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan Evaluasi</button>
+                </div>
+            </form>
+        </div>
+    </div>`;
+
+
+    if (isSidangKomisi) {
+            setupAutomaticGrading();
+        }
+}
+
+
+    function closeGradingModal() {
+        const modal = document.getElementById('gradingModal');
+        if (modal) modal.parentElement.innerHTML = '';
+    }
+
+    async function submitGrade(event, seminarId) {
+        event.preventDefault();
+        const form = document.getElementById('gradingForm');
+        const formData = new FormData(form);
+        const data = { criteria_scores: {}, seminar_id: seminarId };
+        formData.forEach((value, key) => {
+            if (key === 'final_grade' || key === 'general_notes') {
+                data[key] = value;
+            } else {
+                data.criteria_scores[key] = value;
+            }
+        });
+        const response = await fetch("{{ url_for('main.submit_seminar_grade') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        if (response.ok) {
+            alert(result.message);
+            location.reload();
+        } else {
+            alert('Error: ' + result.message);
+        }
+    }
+
+    
+
+        async function downloadExcel() {
+                // Ambil SEMUA ID seminar dari baris yang ditampilkan di tabel
+                const seminarRows = document.querySelectorAll('tr[data-seminar-id]');
+                if (seminarRows.length === 0) {
+                    alert('Tidak ada data untuk diunduh.');
+                    return;
+                }
+
+                // Buat daftar ID seminar
+                const seminarIds = Array.from(seminarRows).map(row => row.dataset.seminarId);
+
+                // Kirim permintaan ke backend
+                const response = await fetch("{{ url_for('main.export_evaluations') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ seminar_ids: seminarIds })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+
+                    const disposition = response.headers.get('Content-Disposition');
+                    let filename = `Laporan_Nilai_Gabungan.xlsx`;
+                    if (disposition && disposition.indexOf('attachment') !== -1) {
+                        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                        const matches = filenameRegex.exec(disposition);
+                        if (matches != null && matches[1]) {
+                            filename = matches[1].replace(/['"]/g, '');
+                        }
+                    }
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    alert('Gagal mengunduh laporan Excel.');
+                }
+            }
+</script>
+{% endblock %}

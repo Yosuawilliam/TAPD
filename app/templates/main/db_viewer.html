@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+{% extends "layouts/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+    .db-table-container {
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        overflow-x: auto;
+        /* Agar bisa scroll horizontal jika tabel lebar */
+    }
+
+    .db-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+
+    .db-table th,
+    .db-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+
+    .db-table th {
+        background-color: #f2f2f2;
+        font-weight: 600;
+    }
+
+    .db-table tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+
+    .table-title {
+        margin-bottom: 15px;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 5px;
+        display: inline-block;
+    }
+</style>
+
+<div class="table-section">
+    <h1 class="table-title">Database Viewer</h1>
+</div>
+
+<div class="db-table-container">
+    <h2 class="table-title">Tabel: User</h2>
+    <table class="db-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>SSO Email</th>
+                <th>Role</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in users %}
+            <tr>
+                <td>{{ item.id }}</td>
+                <td>{{ item.sso_email }}</td>
+                <td>{{ item.role }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="db-table-container">
+    <h2 class="table-title">Tabel: Lecturer</h2>
+    <table class="db-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>User ID</th>
+                <th>Nama</th>
+                <th>NIP</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in lecturers %}
+            <tr>
+                <td>{{ item.id }}</td>
+                <td>{{ item.user_id }}</td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.nip }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="db-table-container">
+    <h2 class="table-title">Tabel: Student</h2>
+    <table class="db-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>User ID</th>
+                <th>NIM</th>
+                <th>Nama</th>
+                <th>Judul Penelitian</th>
+                <th>Tahap Progres</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in students %}
+            <tr>
+                <td>{{ item.id }}</td>
+                <td>{{ item.user_id }}</td>
+                <td>{{ item.nim }}</td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.research_title }}</td>
+                <td>{{ item.current_progress_step }} - {{ item.status_bimbingan }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="db-table-container">
+    <h2 class="table-title">Tabel: Supervision (Relasi Dosen-Mahasiswa)</h2>
+    <table class="db-table">
+        <thead>
+            <tr>
+                <th>Dosen ID</th>
+                <th>Mahasiswa ID</th>
+                <th>Peran</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in supervisions %}
+            <tr>
+                <td>{{ item.lecturer_id }} ({{ item.lecturer.name }})</td>
+                <td>{{ item.student_id }} ({{ item.student.name }})</td>
+                <td>{{ item.role }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="db-table-container">
+    <h2 class="table-title">Tabel: Seminar</h2>
+    <table class="db-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Mahasiswa ID</th>
+                <th>Jenis</th>
+                <th>Tanggal</th>
+                <th>Nilai Final</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in seminars %}
+            <tr>
+                <td>{{ item.id }}</td>
+                <td>{{ item.student_id }} ({{ item.student_profile.name }})</td>
+                <td>{{ item.seminar_type }}</td>
+                <td>{{ item.date.strftime('%d-%m-%Y') }}</td>
+                <td>{{ item.final_grade }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="db-table-container">
+    <h2 class="table-title">Tabel: Evaluation</h2>
+    <table class="db-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Seminar ID</th>
+                <th>Penilai ID</th>
+                <th>Nilai Final</th>
+                <th>Catatan</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in evaluations %}
+            <tr>
+                <td>{{ item.id }}</td>
+                <td>{{ item.seminar_id }}</td>
+                <td>{{ item.evaluator_id }} ({{
+                    item.seminar.student_profile.get_supervisor_by_role(item.seminar.seminar_type).name if
+                    item.seminar.student_profile.get_supervisor_by_role(item.seminar.seminar_type) else 'N/A' }})</td>
+                <td>{{ item.final_grade }}</td>
+                <td style="max-width: 300px; word-break: break-all;">{{ item.criteria_scores | string | truncate(100) }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+{% extends "layouts/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="table-section">
+    <h1 class="table-title">Daftar Pengajuan Pembimbing</h1>
+    <p>Di bawah ini adalah daftar mahasiswa yang mengajukan Anda untuk menjadi bagian dari tim pembimbing mereka.</p>
+
+    <table class="data-table mt-4">
+        <thead>
+            <tr>
+                <th>Tanggal Pengajuan</th>
+                <th>Nama Mahasiswa</th>
+                <th>NIM</th>
+                <th>Judul yang Diajukan</th> 
+                <th>Mengajukan Sebagai</th>
+                <th style="width: 20%;">Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for app in applications %}
+            <tr>
+                <td>{{ app.request_date.strftime('%d %b %Y') }}</td>
+                <td>{{ app.student.name }}</td>
+                <td>{{ app.student.nim }}</td>
+                <td class="research-title">{{ app.research_title_applied }}</td>
+                <td><span class="badge badge-info">{{ app.role_applied_for }}</span></td>
+                <td>
+                    <form action="{{ url_for('main.handle_pengajuan', application_id=app.id) }}" method="POST"
+                        class="d-inline">
+                        <button type="submit" name="action" value="approve" class="btn btn-success btn-sm">
+                            <i class="fas fa-check"></i> Setujui
+                        </button>
+                        <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm">
+                            <i class="fas fa-times"></i> Tolak
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" class="text-center">Tidak ada pengajuan yang menunggu persetujuan.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

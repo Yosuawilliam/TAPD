@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+{% extends "layouts/base.html" %}
+{% block title %}Laporan Honorarium{% endblock %}
+{% block content %}
+<div class="table-section">
+    <h3 class="table-title">Laporan Honorarium Pembimbing</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Aktivitas</th>
+                <th>Mahasiswa</th>
+                <th>Jumlah</th>
+                <th>Status</th>
+                <th>Tanggal Dibayar</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for honor in honorariums %}
+            <tr>
+                <td>{{ honor.activity }}</td>
+                <td>{{ honor.student.name }}</td>
+                <td>Rp {{ "{:,.0f}".format(honor.amount).replace(',', '.') }}</td>
+                <td><span class="status-badge status-{{ honor.status|lower }}">{{ honor.status }}</span></td>
+                <td>{{ honor.paid_date.strftime('%d %b %Y') if honor.paid_date else '-' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" style="text-align:center;">Belum ada data honorarium.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

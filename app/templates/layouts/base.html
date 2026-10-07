@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title|default('Dashboard') }} - Universitas Terbuka</title>
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+        integrity="sha512-1ycn6IcaQQmRGjikFGFW2AHYnU6T6tGzTFJHujKGSWsHHVZEpgegNEjEnKFZn1dpViKMcnX4ju/7qg+inVTFSA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+
+<body>
+    <div class="container">
+        {% include 'layouts/_sidebar.html' %}
+
+        <main class="main-content">
+            {% include 'layouts/_header.html' %}
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="profileModal" style="display:none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 class="modal-title">Ubah Foto Profil</h2>
+                <button type="button" class="modal-close" onclick="closeProfileModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadProfileForm" style="margin-bottom: 15px;">
+                    <div class="form-group">
+                        <label for="profile_picture_input" class="form-label">Pilih Foto Baru (.jpg, .png):</label>
+                        <input type="file" name="profile_picture" id="profile_picture_input" class="form-input" accept=".png, .jpg, .jpeg">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Unggah Foto</button>
+                </form>
+
+                <hr>
+                
+                {% set has_picture = (current_user.role == 'mahasiswa' and current_user.student.profile_picture) or 
+                                     (current_user.role == 'dosen' and current_user.lecturer.profile_picture) %}
+                {% if has_picture %}
+                <p class="form-label">Atau hapus foto profil yang ada:</p>
+                <button id="deleteProfileButton" class="btn btn-danger">Hapus Foto</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const submenuToggles = document.querySelectorAll('.submenu-toggle');
+
+            // Fungsi untuk menangani klik pada menu dropdown
+            submenuToggles.forEach(toggle => {
+                toggle.addEventListener('click', function (event) {
+                    event.preventDefault(); // Mencegah link berpindah halaman
+                    const parentItem = this.closest('.has-submenu');
+                    if (parentItem) {
+                        const submenu = parentItem.querySelector('.submenu');
+                        if (submenu) {
+                            document.querySelectorAll('.has-submenu.active').forEach(activeItem => {
+                                if (activeItem !== parentItem) {
+                                    activeItem.classList.remove('active');
+                                    activeItem.querySelector('.submenu').style.maxHeight = null;
+                                }
+                            });
+                            parentItem.classList.toggle('active');
+                            if (parentItem.classList.contains('active')) {
+                                submenu.style.maxHeight = submenu.scrollHeight + "px";
+                            } else {
+                                submenu.style.maxHeight = null;
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Fungsi untuk menjaga menu aktif tetap terbuka saat halaman dimuat
+            function openActiveSubmenuOnLoad() {
+                const activeLink = document.querySelector('.submenu .nav-link.active');
+                if (activeLink) {
+                    const parentSubmenu = activeLink.closest('.submenu');
+                    const parentItem = parentSubmenu.closest('.has-submenu');
+
+                    if (parentItem) {
+                        parentItem.classList.add('active');
+                        parentSubmenu.style.maxHeight = parentSubmenu.scrollHeight + "px";
+                    }
+                }
+            }
+            openActiveSubmenuOnLoad();
+
+            // ==================================================
+            // SCRIPT UNTUK MODAL FOTO PROFIL
+            // ==================================================
+            const uploadForm = document.getElementById('uploadProfileForm');
+            if(uploadForm) {
+                uploadForm.addEventListener('submit', async function(event) {
+                    event.preventDefault();
+                    const formData = new FormData(this);
+                    const fileInput = document.getElementById('profile_picture_input');
+                    if (!fileInput.files || fileInput.files.length === 0) {
+                        alert('Silakan pilih file untuk diunggah.');
+                        return;
+                    }
+                    formData.append('profile_picture', fileInput.files[0]);
+
+                    try {
+                        const response = await fetch("{{ url_for('main.upload_profile_picture') }}", {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const result = await response.json();
+                        if (response.ok) {
+                            alert(result.message);
+                            window.location.reload(); 
+                        } else {
+                            alert('Error: ' + result.message);
+                        }
+                    } catch (error) {
+                        console.error('Upload Error:', error);
+                        alert('Terjadi kesalahan saat mengunggah foto.');
+                    }
+                });
+            }
+
+            const deleteButton = document.getElementById('deleteProfileButton');
+            if (deleteButton) {
+                deleteButton.addEventListener('click', async function(event) {
+                    event.preventDefault();
+                    if (confirm('Anda yakin ingin menghapus foto profil Anda?')) {
+                        try {
+                            const response = await fetch("{{ url_for('main.delete_profile_picture') }}", {
+                                method: 'POST'
+                            });
+                            const result = await response.json();
+                            if (response.ok) {
+                                alert(result.message);
+
+                                window.location.reload(); 
+                            } else {
+                                alert('Error: ' + result.message);
+                            }
+                        } catch (error) {
+                            console.error('Delete Error:', error);
+                            alert('Terjadi kesalahan saat menghapus foto.');
+                        }
+                    }
+                });
+            }
+        });
+        
+        // Fungsi global untuk membuka dan menutup modal
+        function openProfileModal() {
+            document.getElementById('profileModal').style.display = 'flex';
+        }
+
+        function closeProfileModal() {
+            document.getElementById('profileModal').style.display = 'none';
+        }
+
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

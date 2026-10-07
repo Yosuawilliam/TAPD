@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="table-section">
+    <h3 class="table-title"><i class="fas fa-upload"></i> Kelola Dokumen & Tautan Penting</h3>
+    <p style="margin-bottom: 25px; color: #666;">Unggah dokumen panduan dan template di bawah ini. File yang diunggah
+        akan langsung tersedia di menu "Tautan Penting" pada Dashboard Mahasiswa dan Dosen.</p>
+
+    <form method="POST" enctype="multipart/form-data">
+
+        <div class="student-dashboard-grid" style="grid-template-columns: 1fr 1fr;">
+
+            <!-- KOLOM KIRI: 10 DOKUMEN PANDUAN UMUM -->
+            <div class="pro-card" style="box-shadow: 0 4px 6px rgba(0,0,0,0.05); padding: 25px;">
+                <h4
+                    style="margin-bottom: 20px; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">
+                    <i class="fas fa-folder-open text-primary"></i> 10 Tautan Penting (Format PDF)
+                </h4>
+
+                <!-- Scrollable Container agar tampilan tetap rapi -->
+                <div style="max-height: 400px; overflow-y: auto; padding-right: 10px;">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label class="form-label" style="font-size: 12px; font-weight: bold;">1. CARA PEMBAYARAN WISUDA
+                            & PANDUAN PEMBUATAN POSTER</label>
+                        <input type="file" name="tautan_1" accept=".pdf" class="form-input" style="padding: 8px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label class="form-label" style="font-size: 12px; font-weight: bold;">2. DOKUMEN PERLENGKAPAN
+                            PENDAFTARAN YUDISIUM</label>
+                        <input type="file" name="dokumen_yudisium" accept=".pdf" class="form-input"
+                            style="padding: 8px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label class="form-label" style="font-size: 12px; font-weight: bold;">3. PAKTA INTEGRITAS
+                            PUBLISH PAPER</label>
+                        <input type="file" name="pakta_integritas" accept=".pdf" class="form-input"
+                            style="padding: 8px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label class="form-label" style="font-size: 12px; font-weight: bold;">4. PANDUAN PELAKSANAAN
+                            SIDANG TA</label>
+                        <input type="file" name="panduan_sidang" accept=".pdf" class="form-input" style="padding: 8px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label class="form-label" style="font-size: 12px; font-weight: bold;">5. PANDUAN PENULISAN
+                            PROPOSAL DAN TUGAS AKHIR</label>
+                        <input type="file" name="panduan_proposal" accept=".pdf" class="form-input"
+                            style="padding: 8px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label class="form-label" style="font-size: 12px; font-weight: bold;">6. PANDUAN TUGAS
+                            LITERATURE REVIEW PENULISAN PROPOSAL</label>
+                        <input type="file" name="tautan_6" accept=".pdf" class="form-input" style="padding: 8px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label class="form-label" style="font-size: 12px; font-weight: bold;">7. RENCANA PEMBELAJARAN
+                            SEMESTER MK PENULISAN PROPOSAL</label>
+                        <input type="file" name="tautan_7" accept=".pdf" class="form-input" style="padding: 8px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label class="form-label" style="font-size: 12px; font-weight: bold;">8. RESPONSE FORM</label>
+                        <input type="file" name="tautan_8" accept=".pdf" class="form-input" style="padding: 8px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label class="form-label" style="font-size: 12px; font-weight: bold;">9. SLIDE MATERI MK
+                            PENULISAN PROPOSAL</label>
+                        <input type="file" name="tautan_9" accept=".pdf" class="form-input" style="padding: 8px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label class="form-label" style="font-size: 12px; font-weight: bold;">10. SURAT KETERANGAN INDEX
+                            PUBLIKASI DI TTD OLEH PEMBIMBING</label>
+                        <input type="file" name="tautan_10" accept=".pdf" class="form-input" style="padding: 8px;">
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- KOLOM KANAN: TEMPLATE DINAMIS & PANDUAN DOSEN -->
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+
+                <!-- Panduan Dosen (Berdiri Sendiri) -->
+                <div class="pro-card"
+                    style="box-shadow: 0 4px 6px rgba(0,0,0,0.05); padding: 25px; border-left: 4px solid #991b1b;">
+                    <h4 style="margin-bottom: 15px; color: #991b1b;">
+                        <i class="fas fa-chalkboard-teacher"></i> Panduan Khusus Dosen (PDF)
+                    </h4>
+                    <input type="file" name="panduan_dosen" accept=".pdf" class="form-input" style="padding: 8px;">
+                </div>
+
+                <!-- Template Dinamis Per Tahap -->
+                <div class="pro-card"
+                    style="box-shadow: 0 4px 6px rgba(0,0,0,0.05); padding: 25px; background-color: #f8fafc; flex-grow: 1;">
+                    <h4
+                        style="margin-bottom: 20px; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">
+                        <i class="fas fa-file-signature text-success"></i> Template Persetujuan Promotor
+                    </h4>
+
+                    <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">Pilih tahapan bimbingan, lalu
+                        unggah file Word yang sesuai. Mahasiswa akan mengunduh template ini berdasarkan tahap mereka
+                        saat ini.</p>
+
+                    <div class="form-group">
+                        <label class="form-label">Pilih Tahap Progres</label>
+                        <select name="template_tahap" class="form-input" style="background-color: white;">
+                            <option value="">-- Pilih Tahap Bimbingan --</option>
+                            <option value="1">Tahap 1 - Bimbingan Proposal</option>
+                            <option value="2">Tahap 2 - Sidang Komisi Pra-Proposal</option>
+                            <option value="3">Tahap 3 - Sidang Seminar Proposal</option>
+                            <option value="4">Tahap 4 - Bimbingan Tahap 2 (Analisis)</option>
+                            <option value="5">Tahap 5 - Sidang Komisi Pra-Seminar Hasil</option>
+                            <option value="6">Tahap 6 - Sidang Seminar Hasil</option>
+                            <option value="7">Tahap 7 - Bimbingan Tahap 3</option>
+                            <option value="8">Tahap 8 - Sidang Komisi Pra-Tertutup</option>
+                            <option value="9">Tahap 9 - Sidang Tertutup</option>
+                            <option value="10">Tahap 10 - Perbaikan Sidang</option>
+                            <option value="11">Tahap 11 - Sidang Terbuka</option>
+                            <option value="12">Tahap 12 - Revisi Final</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Unggah File Template (Word)</label>
+                        <input type="file" name="file_template" accept=".doc,.docx" class="form-input"
+                            style="background-color: white; padding: 8px;">
+                    </div>
+
+                    <!-- Informasi Template yang sudah ada -->
+                    <div
+                        style="margin-top: 20px; padding: 15px; background: white; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <p style="font-size: 12px; font-weight: bold; margin-bottom: 10px;">Status Template Saat Ini:
+                        </p>
+                        <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                            {% for i in range(1, 15) %}
+                            {% if i in existing_templates %}
+                            <span class="badge"
+                                style="background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 12px; font-size: 11px;"><i
+                                    class="fas fa-check"></i> T{{ i }}</span>
+                            {% else %}
+                            <span class="badge"
+                                style="background: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 12px; font-size: 11px;"><i
+                                    class="fas fa-times"></i> T{{ i }} Kosong</span>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 25px; text-align: right; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+            <button type="submit" class="btn btn-primary" style="padding: 12px 30px; font-size: 16px;">
+                <i class="fas fa-cloud-upload-alt" style="margin-right: 8px;"></i> Simpan Semua Perubahan
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

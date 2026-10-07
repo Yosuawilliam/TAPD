@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+{% extends "layouts/base.html" %}
+
+{% block title %}Detail Bimbingan - {{ student.name }}{% endblock %}
+
+{% block content %}
+<div class="pro-header">
+    <div class="pro-header-main">
+        <div class="pro-avatar"><i class="fas fa-user-graduate"></i></div>
+        <div>
+            <h2 class="pro-name">{{ student.name }}</h2>
+            <p class="pro-meta">NIM: {{ student.nim }} | Status: {{ student.status_bimbingan }}</p>
+            <p class="pro-title"><strong>Judul:</strong> {{ student.research_title or 'Belum ada judul.' }}</p>
+        </div>
+    </div>
+
+    {% if student.current_progress_step >= 9 and student.current_progress_step < 14 %} <div class="pro-actions">
+        <button class="btn btn-primary" onclick="skipToYudisium({{ student.id }})">
+            <i class="fas fa-graduation-cap"></i> Luluskan Mahasiswa
+        </button>
+</div>
+{% endif %}
+</div>
+
+<div class="pro-card" style="margin-bottom: 25px;">
+    <div class="progress-container">
+        <div class="progress-labels">
+            <span class="label-title">Progress Bimbingan</span>
+            <span class="label-percentage">{{ (student.current_progress_step / 14 * 100) | round | int }}%</span>
+        </div>
+        <div class="progress-bar-track">
+            <div class="progress-bar-fill"
+                style="width: {{ (student.current_progress_step / 14 * 100) | round | int }}%;"></div>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-main-column">
+    <div class="pro-card">
+        <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+            <h3 class="pro-section-title" style="margin-bottom: 0;"><i class="fas fa-folder-open"></i> Dokumen & Tugas</h3>
+        
+            <!-- TOMBOL UNDUH TEMPLATE DINAMIS UNTUK DOSEN -->
+            <a href="{{ url_for('main.download_template_tahap', tahap=student.current_progress_step) }}"
+                class="btn btn-sm btn-info">
+                <i class="fas fa-file-word"></i> Template Persetujuan Tahap {{ student.current_progress_step }}
+            </a>
+        </div>
+
+        <div class="pro-task-list">
+            {% if tasks_with_status %}
+            {% for task in tasks_with_status %}
+            <div class="file-item-student">
+                <div class="file-icon"><i class="fas {{ task.icon }}"></i></div>
+                <div class="file-info-student">
+                    <div class="file-name">{{ task.type }}</div>
+                    {% if task.uploaded_doc %}
+                    <div class="file-status-student status-completed">
+                        <i class="fas fa-check-circle"></i> Diunggah pada {{ task.uploaded_doc.upload_date.strftime('%d
+                        %b %Y') }}
+                    </div>
+                    {% else %}
+                    <div class="file-status-student status-pending">
+                        <i class="fas fa-exclamation-circle"></i> Belum Diunggah
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="file-actions-student">
+                    {% if task.uploaded_doc %}
+                    {% set file_url = url_for('main.serve_upload', filename=task.uploaded_doc.filename) %}
+
+                    <a href="{{ file_url }}" target="_blank" class="btn btn-secondary"><i class="fas fa-eye"></i>
+                        Lihat</a>
+
+                    <a href="{{ file_url }}" download class="btn btn-info"><i class="fas fa-download"></i> Unduh</a>
+
+                    {% if task.uploaded_doc.id in approved_doc_ids %}
+                    <button class="btn btn-warning" id="retract-btn-{{ task.uploaded_doc.id }}"
+                        onclick="retractApproval({{ task.uploaded_doc.id }})">
+                        <i class="fas fa-undo"></i> Tarik Persetujuan
+                    </button>
+                    {% else %}
+                    <button class="btn btn-primary" id="approve-btn-{{ task.uploaded_doc.id }}"
+                        onclick="approveDocument({{ task.uploaded_doc.id }})">
+                        <i class="fas fa-thumbs-up"></i> Setujui
+                    </button>
+                    {% endif %}
+
+                    {% else %}
+                    <button class="btn btn-secondary" disabled>Tidak Ada File</button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p>Tidak ada tugas untuk tahap ini.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="chat-card" style="margin-top: 20px;">
+        <h3 class="pro-section-title"><i class="fas fa-comments"></i> Diskusi dengan Mahasiswa</h3>
+        <div class="chat-content">
+            <div class="chat-messages" id="chat-messages-lecturer"></div>
+        </div>
+        <div class="chat-input-area">
+            <form id="chat-form-lecturer" data-student-id="{{ student.id }}" data-user-id="{{ current_user.id }}">
+                <div class="chat-input-container">
+                    <textarea class="chat-input-field" name="message" id="chat-input-lecturer"
+                        placeholder="Ketik balasan Anda..." rows="1"></textarea>
+                    <label for="chat-attachment-lecturer" class="btn btn-secondary"><i
+                            class="fas fa-paperclip"></i></label>
+                    <input type="file" name="attachment" id="chat-attachment-lecturer" style="display: none;">
+                    <button type="submit" class="chat-send-btn"><i class="fas fa-paper-plane"></i></button>
+                </div>
+                <div id="attachment-preview-lecturer" class="attachment-preview"></div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const chatForm = document.getElementById('chat-form-lecturer');
+        if (chatForm) {
+            const chatBox = document.getElementById('chat-messages-lecturer');
+            const attachmentInput = document.getElementById('chat-attachment-lecturer');
+            const attachmentPreview = document.getElementById('attachment-preview-lecturer');
+            const STUDENT_ID = chatForm.dataset.studentId;
+            const CURRENT_USER_ID = parseInt(chatForm.dataset.userId);
+
+            function displayMessage(msg) {
+                const isSent = msg.sender_id === CURRENT_USER_ID;
+                const senderName = isSent ? 'Anda' : msg.sender_name;
+                const messageClass = isSent ? 'sent' : 'received';
+                let attachmentHTML = '';
+                if (msg.attachment_filename) {
+                    const attachmentUrl = "{{ url_for('main.serve_upload', filename='') }}" + msg.attachment_filename;
+                    const originalAttachmentName = msg.attachment_filename.split('_').slice(3).join('_') || 'Unduh Lampiran';
+                    attachmentHTML = `<div class="chat-attachment" style="margin-top: 8px;"><a href="${attachmentUrl}" class="btn btn-sm btn-info"><i class="fas fa-download"></i> ${originalAttachmentName}</a></div>`;
+                }
+                const messageHtml = `<div class="chat-message ${messageClass}"><div class="message"><div class="message-sender">${senderName}</div><p style="margin:0; white-space: pre-wrap;">${msg.message || ''}</p>${attachmentHTML}</div></div>`;
+                chatBox.insertAdjacentHTML('beforeend', messageHtml);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+
+            async function loadAllMessages() {
+                try {
+                    const response = await fetch(`/student/messages/${STUDENT_ID}`);
+                    if (!response.ok) return;
+                    const messages = await response.json();
+                    chatBox.innerHTML = '';
+                    messages.forEach(displayMessage);
+                } catch (e) { console.error("Gagal memuat pesan:", e); }
+            }
+
+            function removeAttachment() {
+                attachmentInput.value = '';
+                attachmentPreview.innerHTML = '';
+                attachmentPreview.style.display = 'none';
+            }
+
+            chatForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const formData = new FormData(chatForm);
+                if (!formData.get('message').trim() && (!formData.get('attachment') || !formData.get('attachment').size)) return;
+                try {
+                    const response = await fetch(`{{ url_for('student.send_message', student_id=student.id) }}`, { method: 'POST', body: formData });
+                    const result = await response.json();
+                    if (response.ok) {
+                        displayMessage(result.message_data);
+                        chatForm.reset();
+                        removeAttachment();
+                    } else { alert('Gagal mengirim pesan: ' + result.message); }
+                } catch (error) { alert('Terjadi kesalahan jaringan saat mengirim pesan.'); }
+            });
+
+            attachmentInput.addEventListener('change', function () {
+                if (this.files.length > 0) {
+                    const filename = this.files[0].name;
+                    attachmentPreview.innerHTML = `<i class="fas fa-file"></i> <span>${filename}</span> <span class="remove-attachment" title="Hapus file">&times;</span>`;
+                    attachmentPreview.style.display = 'inline-flex';
+                    attachmentPreview.querySelector('.remove-attachment').addEventListener('click', removeAttachment);
+                } else { removeAttachment(); }
+            });
+
+            loadAllMessages();
+            setInterval(loadAllMessages, 30000);
+        }
+    });
+    async function approveDocument(documentId) {
+        const btn = document.getElementById(`approve-btn-${documentId}`);
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+        try {
+            const response = await fetch("{{ url_for('main.approve_document') }}", {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ document_id: documentId })
+            });
+            const result = await response.json();
+            if (result.status === 'success') {
+                alert(result.message);
+                if (result.advanced_to_next_step) {
+                    location.reload();
+                } else {
+                    const newButtonHTML = `<button class="btn btn-warning" id="retract-btn-${documentId}" onclick="retractApproval(${documentId})"><i class="fas fa-undo"></i> Tarik Persetujuan</button>`;
+                    btn.outerHTML = newButtonHTML;
+                }
+            } else {
+                alert('Error: ' + result.message);
+                btn.disabled = false; btn.innerHTML = '<i class="fas fa-thumbs-up"></i> Setujui';
+            }
+        } catch (error) {
+            alert('Terjadi kesalahan saat memproses persetujuan.');
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-thumbs-up"></i> Setujui';
+        }
+    }
+
+    async function retractApproval(documentId) {
+        const btn = document.getElementById(`retract-btn-${documentId}`);
+        if (!confirm('Anda yakin ingin menarik kembali persetujuan untuk dokumen ini?')) return;
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+        try {
+            const response = await fetch("{{ url_for('main.retract_document_approval') }}", {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ document_id: documentId })
+            });
+            const result = await response.json();
+            if (result.status === 'success') {
+                alert(result.message);
+                const newButtonHTML = `<button class="btn btn-primary" id="approve-btn-${documentId}" onclick="approveDocument(${documentId})"><i class="fas fa-thumbs-up"></i> Setujui</button>`;
+                btn.outerHTML = newButtonHTML;
+            } else {
+                alert('Error: ' + result.message);
+                btn.disabled = false; btn.innerHTML = '<i class="fas fa-undo"></i> Tarik Persetujuan';
+            }
+        } catch (error) {
+            alert('Terjadi kesalahan saat memproses pembatalan.');
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-undo"></i> Tarik Persetujuan';
+        }
+    }
+
+    async function skipToYudisium(studentId) {
+        if (!confirm('Anda yakin ingin menaikkan status mahasiswa ini langsung ke tahap Proses Kelulusan?')) return;
+        try {
+            const response = await fetch(`/skip_to_yudisium/${studentId}`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }
+            });
+            const result = await response.json();
+            alert(result.message);
+            if (response.ok) location.reload();
+        } catch (error) {
+            alert('Terjadi kesalahan jaringan saat memproses permintaan.');
+        }
+    }
+</script>
+
+{% endblock %}
