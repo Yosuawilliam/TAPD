@@ -282,7 +282,15 @@ def update_ajuan_status():
 def masukan_hasil_seminar():
     if current_user.role != 'dosen': abort(403)
     student_ids = [s.student_id for s in current_user.lecturer.supervisions]
-    seminars = Seminar.query.filter(Seminar.student_id.in_(student_ids)).order_by(Seminar.date.desc()).all()
+    pra_seminar_types = [
+        'Sidang Komisi Pra-Seminar Proposal',
+        'Sidang Komisi Pra-Seminar Hasil',
+        'Sidang Komisi Pra-Ujian Tertutup'
+    ]
+    seminars = Seminar.query.filter(
+        Seminar.student_id.in_(student_ids),
+        Seminar.seminar_type.in_(pra_seminar_types)
+    ).order_by(Seminar.date.desc()).all()
     evaluated_seminar_ids = []
     evals = Evaluation.query.filter_by(evaluator_id=current_user.lecturer.id).all()
     evaluated_seminar_ids = [e.seminar_id for e in evals]
@@ -667,18 +675,25 @@ def check_and_advance_progress(student):
     required_tasks = TAHAPAN_TUGAS.get(student.current_progress_step, [])
     if not required_tasks: return False
     
+    supervisor_ids = set(s.lecturer_id for s in student.supervisions)
+    if not supervisor_ids:
+        return False
+    
     all_tasks_approved = True
     for task in required_tasks:
         doc = Document.query.filter_by(student_id=student.id, document_type=task['type'], progress_step=student.current_progress_step).first()
         if not doc:
             all_tasks_approved = False
             break
-        if doc.approvals.count() == 0:
+        
+        approved_lecturer_ids = set(a.lecturer_id for a in doc.approvals if a.is_approved)
+        if not supervisor_ids.issubset(approved_lecturer_ids):
             all_tasks_approved = False
             break
             
     if all_tasks_approved:
         student.current_progress_step += 1
+        new_step = student.current_progress_step
         
         status_map = {
             1: "Bimbingan Tahap 1", 
@@ -697,10 +712,22 @@ def check_and_advance_progress(student):
             14: "Proses Kelulusan"
         }
         
-        student.status_bimbingan = status_map.get(student.current_progress_step, f"Tahap {student.current_progress_step}")
+        student.status_bimbingan = status_map.get(new_step, f"Tahap {new_step}")
         
-        if student.current_progress_step >= 14:
+        seminar_creation_map = {
+            2: 'Sidang Komisi Pra-Seminar Proposal',
+            5: 'Sidang Komisi Pra-Seminar Hasil',
+            8: 'Sidang Komisi Pra-Ujian Tertutup'
+        }
+        if new_step in seminar_creation_map:
+            seminar_type = seminar_creation_map[new_step]
+            if not Seminar.query.filter_by(student_id=student.id, seminar_type=seminar_type).first():
+                db.session.add(Seminar(student_id=student.id, seminar_type=seminar_type, date=datetime.date.today()))
+
+        if new_step >= 14:
             student.status_bimbingan = "Lulus Program Doktoral"
+            for sup in student.supervisions:
+                db.session.add(Honorarium(lecturer_id=sup.lecturer_id, student_id=student.id, activity=f"Bimbingan Kelulusan - {student.name}", amount=1500000))
             
         db.session.commit()
         return True

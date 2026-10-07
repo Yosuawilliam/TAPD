@@ -1,15 +1,15 @@
 from app import create_app, db
-from app.models import User, Lecturer, Student, Supervision, Admin
+from app.models import User, Lecturer, Student, Supervision, Admin, Seminar, Evaluation
+import datetime
 
 app = create_app()
 
 def seed_data():
     with app.app_context():
-        if User.query.first():
-            print("[-] Database sudah memiliki data User. Seeding dibatalkan.")
-            return
-
+        # Drop all & recreate for fresh clean seed if needed, or check User
         print("[+] Memulai proses injeksi data awal (Seeding)...")
+        db.drop_all()
+        db.create_all()
 
         progress_steps = {
             1: "Bimbingan Tahap 1", 2: "Sidang Komisi Pra-Seminar Proposal", 
@@ -48,35 +48,6 @@ def seed_data():
         db.session.add_all([dosen1, dosen2, dosen3, dosen4])
         db.session.commit()
 
-        # --- Create Student Users ---
-        mhs1_step = 1
-        user_mhs1 = User(sso_email='melan.rena@student.ut.ac.id', role='mahasiswa')
-        user_mhs1.set_password('password123')
-        mahasiswa1 = Student(user=user_mhs1, nim='501203182', name='MELAN RENA', research_title='MENAVIGASI BADAI PASAR SAHAM', status_bimbingan=progress_steps[mhs1_step], masa='20242', program_studi='MM', ut_daerah='Jakarta', current_progress_step=mhs1_step, zoom_link='https://sl.ut.ac.id/BTRIMKeuangan12112024', phone_number='081200000001')
-
-        mhs2_step = 1
-        user_mhs2 = User(sso_email='dicky.yudha@student.ut.ac.id', role='mahasiswa')
-        user_mhs2.set_password('password123')
-        mahasiswa2 = Student(user=user_mhs2, nim='501253234', name='DICKY YUDHA PERDANA', status_bimbingan=progress_steps[mhs2_step], masa='20242', program_studi='MM', ut_daerah='Bandung', current_progress_step=mhs2_step, phone_number='081200000002')
-
-        mhs3_step = 1
-        user_mhs3 = User(sso_email='gebian.ridho@student.ut.ac.id', role='mahasiswa')
-        user_mhs3.set_password('password123')
-        mahasiswa3 = Student(user=user_mhs3, nim='501273229', name='GEBIAN RIDHO SADEWA', research_title='Pengaruh Pelatihan Karyawan', status_bimbingan=progress_steps[mhs3_step], masa='20251', program_studi='MM', ut_daerah='Yogyakarta', current_progress_step=mhs3_step, zoom_link='https://sl.ut.ac.id/BTRIMSDSMPemasar283582021', phone_number='081200000003')
-        
-        db.session.add_all([user_mhs1, user_mhs2, user_mhs3])
-        db.session.add_all([mahasiswa1, mahasiswa2, mahasiswa3])
-        db.session.commit()
-
-        # --- Create Supervision Relationships ---
-        sup1 = Supervision(lecturer_id=dosen2.id, student_id=mahasiswa1.id, role='Promotor')
-        sup2 = Supervision(lecturer_id=dosen1.id, student_id=mahasiswa1.id, role='Ko-Promotor 1')
-        sup_mhs1_copro2 = Supervision(lecturer_id=dosen4.id, student_id=mahasiswa1.id, role='Ko-Promotor 2')
-        sup5 = Supervision(lecturer_id=dosen3.id, student_id=mahasiswa3.id, role='Promotor')
-        
-        db.session.add_all([sup1, sup2, sup_mhs1_copro2, sup5])
-        db.session.commit()
-        
         print("\n=======================================================")
         print(" SEEDING DATA AWAL BERHASIL! ")
         print("=======================================================")
@@ -88,10 +59,8 @@ def seed_data():
         print(" - tubaggus@ut.ac.id")
         print(" - irwati@ut.ac.id")
         print("\n Data Mahasiswa:")
-        print(" - melan.rena@student.ut.ac.id")
-        print(" - dicky.yudha@student.ut.ac.id")
-        print(" - gebian.ridho@student.ut.ac.id")
-        print("\n 🔑 PASSWORD UNTUK SEMUA AKUN: password123")
+        print(" - (Tidak ada data mahasiswa awal)")
+        print("\n PASSWORD UNTUK SEMUA AKUN: password123")
         print("=======================================================\n")
 
 if __name__ == '__main__':

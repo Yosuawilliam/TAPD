@@ -726,13 +726,11 @@ body {
     color: #dc2626;
 }
 
-.team-member .member-role.co-promotor-1,
 .team-member .member-role.ko-promotor-1 {
     background: #dbeafe;
     color: #2563eb;
 }
 
-.team-member .member-role.co-promotor-2,
 .team-member .member-role.ko-promotor-2 {
     background: #dcfce7;
     color: #16a34a;
@@ -1241,8 +1239,6 @@ body {
     color: #991b1b;
 }
 
-.role-tag-pro.co-promotor-1,
-.role-tag-pro.co-promotor-2,
 .role-tag-pro.ko-promotor-1,
 .role-tag-pro.ko-promotor-2 {
     background-color: #e0e7ff;
@@ -1572,7 +1568,7 @@ body {
     background-color: #f59e0b;
 }
 
-/* Co-Promotor 1 Colors */
+/* Ko-Promotor 1 Colors */
 .slot-copro1 {
     border-color: #3b82f6;
 }
@@ -1581,7 +1577,7 @@ body {
     background-color: #3b82f6;
 }
 
-/* Co-Promotor 2 Colors */
+/* Ko-Promotor 2 Colors */
 .slot-copro2 {
     border-color: #10b981;
 }
